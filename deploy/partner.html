@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Digital Manager — Implementation Roadmap</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06060b;--surface:rgba(255,255,255,0.03);--surface2:rgba(255,255,255,0.06);
+  --surface3:rgba(255,255,255,0.09);
+  --border:rgba(255,255,255,0.06);--border-h:rgba(255,255,255,0.12);
+  --text:#e4e4ef;--text2:#8888a4;--text3:#55556a;
+  --blue:#5b8def;--green:#4ecb71;--purple:#a78bfa;--orange:#f59e42;
+  --pink:#f472b6;--cyan:#38bdf8;--yellow:#facc15;--red:#f87171;
+  --font:'Space Grotesk',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+html{font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw;cursor:grab}
+body.grabbing{cursor:grabbing}
+body::after{
+  content:'';position:fixed;inset:0;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+#canvas{position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible}
+#connections{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+#connections line{stroke:rgba(255,255,255,0.04);stroke-width:1.5;transition:stroke 0.3s,opacity 0.3s}
+#connections line.active{stroke:var(--blue);stroke-width:2;opacity:0.5;filter:drop-shadow(0 0 6px rgba(91,141,239,0.3))}
+#connections line.track-line{stroke:rgba(56,189,248,0.18);stroke-width:3;stroke-dasharray:24 14;animation:elec 6s ease-in-out infinite}
+#connections line.track-line.active{stroke-width:3.5;opacity:0.8;stroke-dasharray:24 14;animation:elec-active 4s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(56,189,248,0.3))}
+@keyframes elec{
+  0%{stroke-dashoffset:0;stroke:rgba(56,189,248,0.18)}
+  33%{stroke:rgba(167,139,250,0.22)}
+  66%{stroke:rgba(78,203,113,0.2)}
+  100%{stroke-dashoffset:-38;stroke:rgba(56,189,248,0.18)}
+}
+@keyframes elec-active{
+  0%{stroke-dashoffset:0;stroke:rgba(56,189,248,0.5)}
+  33%{stroke:rgba(167,139,250,0.55)}
+  66%{stroke:rgba(78,203,113,0.5)}
+  100%{stroke-dashoffset:-38;stroke:rgba(56,189,248,0.5)}
+}
+
+.node{
+  position:absolute;border-radius:16px;cursor:pointer;
+  transition:transform 0.3s ease,box-shadow 0.3s ease,border-color 0.3s ease;
+  user-select:none;z-index:10;
+}
+.node:hover{transform:scale(1.03);z-index:20}
+.node.active{z-index:30;transform:scale(1.05)}
+
+/* Phase nodes — main track (DISTINCT from rest) */
+.node-phase{
+  width:230px;padding:22px;border-radius:28px;
+  background:linear-gradient(135deg,rgba(56,189,248,0.1),rgba(91,141,239,0.05));
+  border:2px solid rgba(56,189,248,0.3);
+  box-shadow:0 0 40px rgba(56,189,248,0.08),inset 0 0 30px rgba(56,189,248,0.02);
+  backdrop-filter:blur(10px);
+}
+.node-phase:hover{border-color:rgba(56,189,248,0.5);box-shadow:0 0 60px rgba(56,189,248,0.15),inset 0 0 30px rgba(56,189,248,0.04)}
+.node-phase.active{border-color:var(--cyan);box-shadow:0 0 70px rgba(56,189,248,0.2),inset 0 0 40px rgba(56,189,248,0.05)}
+.phase-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:8px;font-size:12px;font-weight:700;
+  font-family:var(--mono);margin-bottom:10px;
+}
+.node-phase h3{font-size:14.5px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px}
+.node-phase .n-sub{font-size:11px;color:var(--text2);line-height:1.45;margin-bottom:8px}
+.node-phase .n-time{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10.5px;font-weight:600;font-family:var(--mono);
+  padding:4px 10px;border-radius:6px;letter-spacing:0.5px;
+}
+
+/* Info nodes — above track */
+.node-info{
+  width:175px;padding:16px;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(6px);
+}
+.node-info:hover{border-color:var(--border-h)}
+.node-info.active{border-color:var(--blue);box-shadow:0 0 30px rgba(91,141,239,0.08)}
+.node-info .n-icon{font-size:20px;margin-bottom:6px}
+.node-info h4{font-size:12.5px;font-weight:700;letter-spacing:-0.2px;margin-bottom:3px}
+.node-info .n-sub{font-size:10.5px;color:var(--text2);line-height:1.4}
+.node-info .n-tag{
+  display:inline-block;font-size:9px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;margin-top:6px;font-family:var(--mono);
+}
+
+/* Detail nodes — below track */
+.node-leaf{
+  width:155px;padding:13px;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(6px);
+}
+.node-leaf:hover{border-color:var(--border-h)}
+.node-leaf.active{border-color:var(--blue);box-shadow:0 0 25px rgba(91,141,239,0.06)}
+.node-leaf h4{font-size:11.5px;font-weight:600;margin-bottom:3px}
+.node-leaf p{font-size:10px;color:var(--text2);line-height:1.4}
+.node-leaf .n-val{font-size:13px;font-weight:700;font-family:var(--mono);margin-top:5px}
+
+/* Track time labels */
+.track-label{
+  position:absolute;z-index:5;
+  font-size:10px;font-weight:600;font-family:var(--mono);color:var(--text3);
+  letter-spacing:0.5px;white-space:nowrap;
+  padding:4px 10px;border-radius:12px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.12);
+}
+
+/* Detail panel */
+#detail-panel{
+  position:fixed;right:-420px;top:0;bottom:0;width:400px;
+  background:rgba(10,10,18,0.95);backdrop-filter:blur(20px);
+  border-left:1px solid var(--border);z-index:1000;
+  transition:right 0.4s cubic-bezier(0.16,1,0.3,1);overflow-y:auto;padding:0;
+}
+#detail-panel.open{right:0}
+#detail-panel::-webkit-scrollbar{width:3px}
+#detail-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.dp-header{
+  padding:28px 24px 20px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;background:rgba(10,10,18,0.95);backdrop-filter:blur(20px);z-index:2;
+}
+.dp-close{
+  position:absolute;top:20px;right:20px;width:32px;height:32px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text3);transition:all 0.15s;
+}
+.dp-close:hover{border-color:var(--blue);color:var(--text)}
+.dp-header .dp-icon{font-size:28px;margin-bottom:10px}
+.dp-header h3{font-size:18px;font-weight:700;letter-spacing:-0.5px}
+.dp-header p{font-size:12.5px;color:var(--text2);margin-top:4px;line-height:1.5}
+.dp-body{padding:20px 24px 40px}
+
+#hud{position:fixed;top:16px;left:16px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.hud-title{
+  font-size:15px;font-weight:700;letter-spacing:-0.3px;
+  padding:10px 16px;background:rgba(10,10,18,0.8);backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:10px;
+}
+.hud-title span{font-size:11px;font-weight:400;color:var(--text3);margin-left:8px}
+#controls{position:fixed;bottom:16px;left:16px;z-index:500;display:flex;gap:6px}
+.ctrl-btn{
+  width:36px;height:36px;border-radius:10px;background:rgba(10,10,18,0.8);backdrop-filter:blur(12px);
+  border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--text3);transition:all 0.15s;
+}
+.ctrl-btn:hover{border-color:var(--blue);color:var(--text)}
+#minimap{
+  position:fixed;bottom:16px;right:16px;width:180px;height:80px;
+  background:rgba(10,10,18,0.8);backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:10px;z-index:500;overflow:hidden;
+}
+#minimap-canvas{width:100%;height:100%}
+#guide{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:500;
+  background:rgba(10,10,18,0.85);backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:12px;padding:10px 20px;
+  font-size:12px;color:var(--text2);display:flex;align-items:center;gap:16px;transition:opacity 0.5s;
+}
+#guide kbd{
+  display:inline-flex;padding:2px 6px;border-radius:4px;
+  background:var(--surface2);border:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text3);
+}
+</style>
+</head>
+<body>
+
+<div id="hud"><div class="hud-title">AI Digital Manager<span>Implementation Roadmap</span></div></div>
+<div id="controls">
+  <button class="ctrl-btn" onclick="zoomIn()" title="Zoom in">+</button>
+  <button class="ctrl-btn" onclick="zoomOut()" title="Zoom out">&#8722;</button>
+  <button class="ctrl-btn" onclick="resetView()" title="Reset view">&#8962;</button>
+</div>
+<div id="guide">
+  <span><kbd>Drag</kbd> pan</span>
+  <span><kbd>Scroll</kbd> zoom</span>
+  <span><kbd>Click</kbd> node for details</span>
+  <span><kbd>Esc</kbd> close panel</span>
+</div>
+<div id="minimap"><canvas id="minimap-canvas"></canvas></div>
+<svg id="connections" xmlns="http://www.w3.org/2000/svg"></svg>
+
+<div id="canvas">
+
+  <!-- ═══════ PHASE TRACK (y=430) ═══════ -->
+  <div class="node node-phase" id="ph1" data-detail="phase1" style="left:200px;top:430px">
+    <div class="phase-num" style="background:rgba(91,141,239,0.15);color:var(--blue)">01</div>
+    <h3>Discovery & Setup</h3>
+    <div class="n-sub">Deep-dive into the business, define Digital Manager personality, set qualification criteria</div>
+    <span class="n-time" style="background:rgba(91,141,239,0.08);color:var(--blue)">&#9202; Week 1&#8211;2</span>
+  </div>
+
+  <div class="node node-phase" id="ph2" data-detail="phase2" style="left:620px;top:430px">
+    <div class="phase-num" style="background:rgba(78,203,113,0.15);color:var(--green)">02</div>
+    <h3>Build & Configure</h3>
+    <div class="n-sub">Deploy backend, connect integrations, set up automations</div>
+    <span class="n-time" style="background:rgba(78,203,113,0.08);color:var(--green)">&#9202; Week 2&#8211;4</span>
+  </div>
+
+  <div class="node node-phase" id="ph3" data-detail="phase3" style="left:1040px;top:430px">
+    <div class="phase-num" style="background:rgba(167,139,250,0.15);color:var(--purple)">03</div>
+    <h3>Test & Optimize</h3>
+    <div class="n-sub">50+ test conversations, calibrate scoring, tune inquiry handling</div>
+    <span class="n-time" style="background:rgba(167,139,250,0.08);color:var(--purple)">&#9202; Week 4&#8211;5</span>
+  </div>
+
+  <div class="node node-phase" id="ph4" data-detail="phase4" style="left:1460px;top:430px">
+    <div class="phase-num" style="background:rgba(245,158,66,0.15);color:var(--orange)">04</div>
+    <h3>Launch & Monitor</h3>
+    <div class="n-sub">Go live on your site, monitor first real conversations, adjust</div>
+    <span class="n-time" style="background:rgba(245,158,66,0.08);color:var(--orange)">&#9202; Week 5&#8211;7</span>
+  </div>
+
+  <div class="node node-phase" id="ph5" data-detail="phase5" style="left:1880px;top:430px">
+    <div class="phase-num" style="background:rgba(250,204,21,0.15);color:var(--yellow)">05</div>
+    <h3>Scale & Grow</h3>
+    <div class="n-sub">Optimize conversions, expand features, multiply results</div>
+    <span class="n-time" style="background:rgba(250,204,21,0.08);color:var(--yellow)">&#9202; Month 2&#8211;4</span>
+  </div>
+
+  <!-- Track time arrows between phases -->
+  <div class="track-label" style="left:470px;top:475px">2 weeks &#8594;</div>
+  <div class="track-label" style="left:890px;top:475px">2 weeks &#8594;</div>
+  <div class="track-label" style="left:1310px;top:475px">1 week &#8594;</div>
+  <div class="track-label" style="left:1730px;top:475px">4&#8211;8 weeks &#8594;</div>
+
+  <!-- ═══════ INFO NODES (above track, y=210) ═══════ -->
+  <div class="node node-info" id="inf-tech" data-detail="tech" style="left:230px;top:210px">
+    <div class="n-icon">&#128295;</div><h4>Tech Stack</h4>
+    <div class="n-sub">6 components, all open-source or free-tier</div>
+    <span class="n-tag" style="background:rgba(78,203,113,0.1);color:var(--green)">ARCHITECTURE</span>
+  </div>
+
+  <div class="node node-info" id="inf-costs" data-detail="costs" style="left:650px;top:210px">
+    <div class="n-icon">&#128176;</div><h4>Unit Economics</h4>
+    <div class="n-sub">Low infra costs, 70&#8211;85% gross margin</div>
+    <span class="n-tag" style="background:rgba(245,158,66,0.1);color:var(--orange)">HIGH MARGIN</span>
+  </div>
+
+  <div class="node node-info" id="inf-ai" data-detail="ai" style="left:1070px;top:210px">
+    <div class="n-icon">&#129504;</div><h4>Digital Manager</h4>
+    <div class="n-sub">24/7 inquiry handling, live scoring, auto-booking</div>
+    <span class="n-tag" style="background:rgba(167,139,250,0.1);color:var(--purple)">AI ENGINE</span>
+  </div>
+
+  <div class="node node-info" id="inf-revenue" data-detail="revenue" style="left:1490px;top:210px">
+    <div class="n-icon">&#128200;</div><h4>Revenue Model</h4>
+    <div class="n-sub">R$997&#8211;4,997/mo per client + setup fees</div>
+    <span class="n-tag" style="background:rgba(78,203,113,0.1);color:var(--green)">BUSINESS</span>
+  </div>
+
+  <div class="node node-info" id="inf-results" data-detail="results" style="left:1910px;top:210px">
+    <div class="n-icon">&#127942;</div><h4>Results & ROI</h4>
+    <div class="n-sub">Typical outcomes, first 30&#8211;90 days</div>
+    <span class="n-tag" style="background:rgba(250,204,21,0.1);color:var(--yellow)">OUTCOMES</span>
+  </div>
+
+  <!-- ═══════ DETAIL NODES (below track) ═══════ -->
+  <!-- Phase 1 details -->
+  <div class="node node-leaf" id="d1a" data-detail="phase1" style="left:120px;top:640px">
+    <h4>Business Analysis</h4><p>Target audience, competitors, USPs, pain points</p>
+    <div class="n-val" style="color:var(--blue)">2&#8211;3h</div>
+  </div>
+  <div class="node node-leaf" id="d1b" data-detail="phase1" style="left:310px;top:640px">
+    <h4>AI Persona Config</h4><p>Brand voice, scripts, objection playbook</p>
+    <div class="n-val" style="color:var(--blue)">2&#8211;3h</div>
+  </div>
+  <div class="node node-leaf" id="d1c" data-detail="phase1" style="left:210px;top:770px">
+    <h4>Scoring Rubric</h4><p>Define qualification criteria and weights</p>
+    <div class="n-val" style="color:var(--blue)">1&#8211;2h</div>
+  </div>
+
+  <!-- Phase 2 details -->
+  <div class="node node-leaf" id="d2a" data-detail="phase2" style="left:540px;top:640px">
+    <h4>Backend + API</h4><p>Node.js + Claude deployed on Railway</p>
+    <div class="n-val" style="color:var(--green)">$5/mo</div>
+  </div>
+  <div class="node node-leaf" id="d2b" data-detail="phase2" style="left:730px;top:640px">
+    <h4>Chat Widget</h4><p>2-line embed for any website</p>
+    <div class="n-val" style="color:var(--green)">~2h</div>
+  </div>
+  <div class="node node-leaf" id="d2c" data-detail="phase2" style="left:630px;top:770px">
+    <h4>Automations</h4><p>N8N + Cal.com + Sheets + Telegram</p>
+    <div class="n-val" style="color:var(--green)">~3h</div>
+  </div>
+
+  <!-- Phase 3 details -->
+  <div class="node node-leaf" id="d3a" data-detail="phase3" style="left:960px;top:640px">
+    <h4>50+ Test Chats</h4><p>Edge cases, objections, wrong-fit visitors</p>
+    <div class="n-val" style="color:var(--purple)">~3h</div>
+  </div>
+  <div class="node node-leaf" id="d3b" data-detail="phase3" style="left:1150px;top:640px">
+    <h4>Score Calibration</h4><p>Verify hot=high, cold=low</p>
+    <div class="n-val" style="color:var(--purple)">~2h</div>
+  </div>
+  <div class="node node-leaf" id="d3c" data-detail="phase3" style="left:1050px;top:770px">
+    <h4>Quality Gates</h4><p>Naturalness, accuracy, zero false bookings</p>
+    <div class="n-val" style="color:var(--purple)">Pass/Fail</div>
+  </div>
+
+  <!-- Phase 4 details -->
+  <div class="node node-leaf" id="d4a" data-detail="phase4" style="left:1380px;top:640px">
+    <h4>Embed & Go Live</h4><p>Widget on live site, first real visitors</p>
+    <div class="n-val" style="color:var(--orange)">Day 1</div>
+  </div>
+  <div class="node node-leaf" id="d4b" data-detail="phase4" style="left:1570px;top:640px">
+    <h4>Active Monitoring</h4><p>Watch first 20 conversations, fine-tune</p>
+    <div class="n-val" style="color:var(--orange)">1&#8211;2 wks</div>
+  </div>
+  <div class="node node-leaf" id="d4c" data-detail="phase4" style="left:1470px;top:770px">
+    <h4>First Leads</h4><p>Real qualified leads hitting your calendar</p>
+    <div class="n-val" style="color:var(--green)">Week 6&#8211;7</div>
+  </div>
+
+  <!-- Phase 5 details -->
+  <div class="node node-leaf" id="d5a" data-detail="phase5" style="left:1800px;top:640px">
+    <h4>Conversion Optimization</h4><p>A/B test openers, analyze funnel drops</p>
+    <div class="n-val" style="color:var(--yellow)">Ongoing</div>
+  </div>
+  <div class="node node-leaf" id="d5b" data-detail="phase5" style="left:1990px;top:640px">
+    <h4>Feature Expansion</h4><p>Multi-language, follow-up sequences, analytics</p>
+    <div class="n-val" style="color:var(--yellow)">Month 3+</div>
+  </div>
+  <div class="node node-leaf" id="d5c" data-detail="phase5" style="left:1890px;top:770px">
+    <h4>Growth Metrics</h4><p>Track ROI, scale to more pages/domains</p>
+    <div class="n-val" style="color:var(--green)">10&#8211;30x ROI</div>
+  </div>
+
+</div>
+
+<div id="detail-panel">
+  <div class="dp-header">
+    <button class="dp-close" onclick="closePanel()">&#10005;</button>
+    <div class="dp-icon" id="dp-icon"></div>
+    <h3 id="dp-title"></h3>
+    <p id="dp-desc"></p>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<script>
+(function(){
+  /* ═══ EDGES ═══ */
+  var TRACK_EDGES = [['ph1','ph2'],['ph2','ph3'],['ph3','ph4'],['ph4','ph5']];
+  var BRANCH_EDGES = [
+    ['ph1','inf-tech'],['ph2','inf-costs'],['ph3','inf-ai'],['ph4','inf-revenue'],['ph5','inf-results'],
+    ['ph1','d1a'],['ph1','d1b'],['ph1','d1c'],
+    ['ph2','d2a'],['ph2','d2b'],['ph2','d2c'],
+    ['ph3','d3a'],['ph3','d3b'],['ph3','d3c'],
+    ['ph4','d4a'],['ph4','d4b'],['ph4','d4c'],
+    ['ph5','d5a'],['ph5','d5b'],['ph5','d5c'],
+  ];
+
+  /* ═══ SAFE DOM BUILDERS ═══ */
+  function buildMetric(label, val, color){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font-size:12px;color:#8888a4';
+    lbl.textContent = label;
+    var v = document.createElement('span');
+    v.style.cssText = 'font-size:14px;font-weight:700;font-family:var(--mono);color:'+(color||'var(--text)');
+    v.textContent = val;
+    row.appendChild(lbl); row.appendChild(v);
+    return row;
+  }
+  function buildItem(text, color){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.06);font-size:12.5px;line-height:1.5;margin-bottom:6px';
+    var dot = document.createElement('div');
+    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px;background:'+(color||'var(--blue)');
+    var txt = document.createElement('div');
+    txt.textContent = text;
+    row.appendChild(dot); row.appendChild(txt);
+    return row;
+  }
+  function buildLabel(text){
+    var h = document.createElement('h4');
+    h.style.cssText = 'font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#55556a;margin:20px 0 10px;font-family:var(--mono)';
+    h.textContent = text;
+    return h;
+  }
+
+  /* ═══ DETAIL PANEL CONTENT ═══ */
+  var DETAILS = {
+    phase1: function(c){
+      c.appendChild(buildLabel('What Happens'));
+      c.appendChild(buildItem('Deep-dive into your business: services, pricing, differentiators, target audience','#5b8def'));
+      c.appendChild(buildItem('Map your ideal customer profile and define qualification criteria (Need, Budget, Authority, Timeline)','#5b8def'));
+      c.appendChild(buildItem('Identify top 10 objections your prospects raise and craft winning responses','#5b8def'));
+      c.appendChild(buildItem('Configure AI personality to match your brand voice and sales style','#5b8def'));
+      c.appendChild(buildLabel('Deliverables'));
+      c.appendChild(buildMetric('AI persona config','config.json','#5b8def'));
+      c.appendChild(buildMetric('Conversation scripts','5 phases','#5b8def'));
+      c.appendChild(buildMetric('Scoring rubric','4 criteria','#5b8def'));
+      c.appendChild(buildMetric('Objection playbook','10+ responses','#5b8def'));
+      c.appendChild(buildLabel('Your Involvement'));
+      c.appendChild(buildMetric('Meetings','2 calls (1h each)','#8888a4'));
+      c.appendChild(buildMetric('Our work','4-6 hours','#5b8def'));
+      c.appendChild(buildMetric('Timeline','Week 1-2','#5b8def'));
+    },
+    phase2: function(c){
+      c.appendChild(buildLabel('What We Build'));
+      c.appendChild(buildItem('Deploy Node.js + Express backend with Claude AI integration','#4ecb71'));
+      c.appendChild(buildItem('Configure chat widget with your brand colors, logo, and welcome message','#4ecb71'));
+      c.appendChild(buildItem('Set up Cal.com scheduling with your calendar and event types','#4ecb71'));
+      c.appendChild(buildItem('Create Google Sheets CRM with custom columns for your pipeline','#4ecb71'));
+      c.appendChild(buildItem('Configure N8N automation flows: webhooks, email sequences, notifications','#4ecb71'));
+      c.appendChild(buildItem('Set up Telegram bot for instant lead alerts on your phone','#4ecb71'));
+      c.appendChild(buildLabel('Stack & Costs'));
+      c.appendChild(buildMetric('Claude AI (Sonnet)','~R$15/mo','#f59e42'));
+      c.appendChild(buildMetric('Railway hosting','~R$25/mo','#f59e42'));
+      c.appendChild(buildMetric('Cal.com + Sheets + N8N','Free','#4ecb71'));
+      c.appendChild(buildMetric('Total per client','~R$40-55/mo','#f59e42'));
+      c.appendChild(buildLabel('Timeline'));
+      c.appendChild(buildMetric('Our work','6-10 hours','#4ecb71'));
+      c.appendChild(buildMetric('Duration','Week 2-4','#4ecb71'));
+    },
+    phase3: function(c){
+      c.appendChild(buildLabel('Testing Protocol'));
+      c.appendChild(buildItem('Run 50+ simulated conversations covering all scenarios','#a78bfa'));
+      c.appendChild(buildItem('Test edge cases: price objections, competitor mentions, wrong-fit visitors, tire-kickers','#a78bfa'));
+      c.appendChild(buildItem('Calibrate scoring: ensure hot leads score 70+, lukewarm 40-69, cold below 40','#a78bfa'));
+      c.appendChild(buildItem('Verify end-to-end: chat \u2192 qualify \u2192 book \u2192 CRM write \u2192 notification','#a78bfa'));
+      c.appendChild(buildItem('Test multi-language if applicable (PT, EN, ES)','#a78bfa'));
+      c.appendChild(buildLabel('Quality Gates'));
+      c.appendChild(buildMetric('Conversation naturalness','\u2265 8/10','#a78bfa'));
+      c.appendChild(buildMetric('Scoring accuracy','\u2265 90%','#a78bfa'));
+      c.appendChild(buildMetric('False booking rate','0%','#4ecb71'));
+      c.appendChild(buildMetric('Response latency','< 3 seconds','#38bdf8'));
+      c.appendChild(buildLabel('Timeline'));
+      c.appendChild(buildMetric('Our work','3-5 hours','#a78bfa'));
+      c.appendChild(buildMetric('Duration','Week 4-5','#a78bfa'));
+    },
+    phase4: function(c){
+      c.appendChild(buildLabel('Go-Live Steps'));
+      c.appendChild(buildItem('Embed 2-line widget on your live website (WordPress, Wix, Webflow, custom)','#f59e42'));
+      c.appendChild(buildItem('Monitor first 20 real conversations live \u2014 fine-tune responses in real-time','#f59e42'));
+      c.appendChild(buildItem('Verify lead capture: every qualified visitor lands in your CRM + calendar','#f59e42'));
+      c.appendChild(buildItem('Adjust conversation tone, qualifying thresholds, and booking triggers based on real data','#f59e42'));
+      c.appendChild(buildLabel('First Week Metrics'));
+      c.appendChild(buildMetric('Visitors engaged','15-30%','#5b8def'));
+      c.appendChild(buildMetric('Chats completed','60-80%','#4ecb71'));
+      c.appendChild(buildMetric('Leads qualified','40-60%','#a78bfa'));
+      c.appendChild(buildMetric('Calls booked','First week','#f59e42'));
+      c.appendChild(buildLabel('Timeline'));
+      c.appendChild(buildMetric('Active monitoring','1-2 weeks','#f59e42'));
+      c.appendChild(buildMetric('Duration','Week 5-7','#f59e42'));
+    },
+    phase5: function(c){
+      c.appendChild(buildLabel('Optimization'));
+      c.appendChild(buildItem('Analyze full conversion funnel: where do visitors drop off?','#facc15'));
+      c.appendChild(buildItem('A/B test conversation openers and discovery questions','#facc15'));
+      c.appendChild(buildItem('Expand widget to more pages and landing pages','#facc15'));
+      c.appendChild(buildItem('Add advanced follow-up email sequences (summary \u2192 proposal \u2192 nudge \u2192 close)','#facc15'));
+      c.appendChild(buildLabel('Growth Features'));
+      c.appendChild(buildItem('Multi-language support (PT, EN, ES per visitor)','#38bdf8'));
+      c.appendChild(buildItem('Returning visitor recognition and personalization','#a78bfa'));
+      c.appendChild(buildItem('Enhanced analytics dashboard with conversion tracking','#4ecb71'));
+      c.appendChild(buildItem('Voice-to-text and WhatsApp channel integration','#f472b6'));
+      c.appendChild(buildLabel('Scale Targets'));
+      c.appendChild(buildMetric('Leads per month','40-100','#4ecb71'));
+      c.appendChild(buildMetric('Calls booked','15-30/mo','#5b8def'));
+      c.appendChild(buildMetric('Cost per lead','R$0.40-0.80','#f59e42'));
+      c.appendChild(buildMetric('Agent ROI','10-30x','#facc15'));
+    },
+    tech: function(c){
+      c.appendChild(buildLabel('Stack Components'));
+      c.appendChild(buildMetric('Claude AI (Sonnet)','Conversation brain','#5b8def'));
+      c.appendChild(buildMetric('Node.js + Express','API server','#4ecb71'));
+      c.appendChild(buildMetric('Cal.com','Scheduling','#a78bfa'));
+      c.appendChild(buildMetric('Google Sheets','Lightweight CRM','#f59e42'));
+      c.appendChild(buildMetric('N8N','Automation engine','#f472b6'));
+      c.appendChild(buildMetric('Telegram','Push notifications','#38bdf8'));
+      c.appendChild(buildLabel('Why This Stack'));
+      c.appendChild(buildItem('All open-source or free-tier \u2014 no vendor lock-in','#4ecb71'));
+      c.appendChild(buildItem('Swap any component without rearchitecting','#5b8def'));
+      c.appendChild(buildItem('Clients already know Google Sheets \u2014 zero training','#f59e42'));
+      c.appendChild(buildItem('Scales horizontally: add clients without infrastructure changes','#a78bfa'));
+    },
+    costs: function(c){
+      c.appendChild(buildLabel('Infrastructure Per Client'));
+      c.appendChild(buildMetric('AI engine + hosting','Low','#4ecb71'));
+      c.appendChild(buildMetric('Scheduling + CRM + alerts','Free tools','#4ecb71'));
+      c.appendChild(buildMetric('Automation engine','Free (self-hosted)','#4ecb71'));
+      c.appendChild(buildLabel('Why Margins Are High'));
+      c.appendChild(buildItem('All core tools are open-source or free-tier \u2014 no expensive SaaS subscriptions per client','#4ecb71'));
+      c.appendChild(buildItem('AI costs are usage-based \u2014 only charged when visitors actually engage in conversation','#5b8def'));
+      c.appendChild(buildItem('Infrastructure scales horizontally \u2014 adding clients does not linearly increase costs','#a78bfa'));
+      c.appendChild(buildItem('No per-seat licensing \u2014 one deployment serves the entire client organization','#f59e42'));
+      c.appendChild(buildLabel('Unit Economics'));
+      c.appendChild(buildMetric('Gross margin','70\u201385%','#4ecb71'));
+      c.appendChild(buildMetric('Breakeven','1\u20132 clients','#38bdf8'));
+      c.appendChild(buildMetric('At 10 clients','Margin exceeds 80%','#4ecb71'));
+    },
+    ai: function(c){
+      c.appendChild(buildLabel('Digital Manager Capabilities'));
+      c.appendChild(buildItem('24/7 automated inquiry handling \u2014 answers availability, pricing ranges, booking process, technical details instantly','#38bdf8'));
+      c.appendChild(buildItem('Natural conversation flow: greeting \u2192 discovery \u2192 qualification \u2192 booking \u2192 follow-up','#a78bfa'));
+      c.appendChild(buildItem('Live lead scoring: 4 criteria (Need, Budget, Authority, Timeline) recalculated every message','#4ecb71'));
+      c.appendChild(buildItem('Smart actions: auto-book calls, capture leads to CRM, trigger notifications, send follow-up emails','#f59e42'));
+      c.appendChild(buildLabel('How It Works'));
+      c.appendChild(buildItem('Each client gets a fully customized AI personality \u2014 trained on their services, pricing, FAQs, and brand voice','#5b8def'));
+      c.appendChild(buildItem('Handles objections naturally: price concerns, timing, trust, competitor comparisons','#a78bfa'));
+      c.appendChild(buildItem('Multi-language support: PT-BR, EN, ES, DE \u2014 configurable per client','#4ecb71'));
+      c.appendChild(buildLabel('Intelligence'));
+      c.appendChild(buildMetric('Conversation phases','5 automated','#a78bfa'));
+      c.appendChild(buildMetric('Lead scoring','Real-time 0-100','#4ecb71'));
+      c.appendChild(buildMetric('Response time','< 3 seconds','#38bdf8'));
+      c.appendChild(buildMetric('Availability','24/7/365','#f59e42'));
+    },
+    revenue: function(c){
+      c.appendChild(buildLabel('Client Pricing Tiers'));
+      c.appendChild(buildMetric('Essentials','R$997/mo','#4ecb71'));
+      c.appendChild(buildItem('1 website, Digital Manager chatbot, basic follow-ups, CRM integration, instant notifications','#4ecb71'));
+      c.appendChild(buildMetric('Growth','R$2,497/mo','#5b8def'));
+      c.appendChild(buildItem('Multi-page widget, advanced lead scoring, custom objection handling, email sequences, analytics dashboard','#5b8def'));
+      c.appendChild(buildMetric('Premium','R$4,997/mo','#a78bfa'));
+      c.appendChild(buildItem('Full custom AI personality, multi-language, WhatsApp channel, priority optimization, dedicated account support','#a78bfa'));
+      c.appendChild(buildLabel('Setup Fee (One-Time)'));
+      c.appendChild(buildMetric('Deployment + Config','R$5,000\u201312,000','#f59e42'));
+      c.appendChild(buildItem('Covers full implementation: discovery, build, testing, and launch. Varies by business complexity.','#f59e42'));
+      c.appendChild(buildLabel('Launch Month Strategy'));
+      c.appendChild(buildItem('Every new client gets Premium-level features for Month 1 \u2014 they experience full value upfront, then choose their ongoing tier. Proven to drive 30-50% upsell to higher tiers.','#facc15'));
+      c.appendChild(buildLabel('Revenue at Scale'));
+      c.appendChild(buildMetric('5 Essentials clients','R$4,985/mo'));
+      c.appendChild(buildMetric('5 Growth clients','R$12,485/mo','#4ecb71'));
+      c.appendChild(buildMetric('10 mixed clients','R$25,000+/mo','#4ecb71'));
+      c.appendChild(buildMetric('Gross margin','70\u201385%','#4ecb71'));
+      c.appendChild(buildMetric('Breakeven','1\u20132 clients','#38bdf8'));
+    },
+    results: function(c){
+      c.appendChild(buildLabel('30-90 Day Benchmarks'));
+      c.appendChild(buildMetric('Visitors engaged','15-30%','#5b8def'));
+      c.appendChild(buildMetric('Leads captured','40-100/mo','#4ecb71'));
+      c.appendChild(buildMetric('Calls booked','15-30/mo','#a78bfa'));
+      c.appendChild(buildMetric('Cost per lead','R$0.40-0.80','#f59e42'));
+      c.appendChild(buildMetric('Agent ROI','10-30x','#facc15'));
+      c.appendChild(buildLabel('Real-World Scenarios'));
+      c.appendChild(buildItem('Event venue booking R$8K average. Digital Manager books 6 qualified visits/month. 2 convert = R$16,000 new revenue vs. R$997/mo cost.','#4ecb71'));
+      c.appendChild(buildItem('B2B consultancy at R$15K/project. Digital Manager books 8 qualified calls/month. 1 closes = R$15,000 vs. R$2,497/mo cost.','#5b8def'));
+      c.appendChild(buildItem('Service provider with R$3,500 packages. 5 calls/week, 2 convert/month = R$7,000 new revenue vs. R$997/mo cost.','#a78bfa'));
+    },
+  };
+
+  var META = {
+    phase1:{icon:'\u2460',title:'Phase 1: Discovery & Setup',desc:'Weeks 1-2. Deep-dive into your business to configure the perfect AI sales agent.'},
+    phase2:{icon:'\u2461',title:'Phase 2: Build & Configure',desc:'Weeks 2-4. Deploy the full stack and connect all integrations.'},
+    phase3:{icon:'\u2462',title:'Phase 3: Test & Optimize',desc:'Weeks 4-5. Rigorous testing to ensure quality before going live.'},
+    phase4:{icon:'\u2463',title:'Phase 4: Launch & Monitor',desc:'Weeks 5-7. Go live and actively monitor real performance.'},
+    phase5:{icon:'\u2464',title:'Phase 5: Scale & Grow',desc:'Months 2-4. Optimize, expand, and maximize ROI.'},
+    tech:{icon:'\uD83D\uDD27',title:'Tech Stack',desc:'6 reliable, low-cost components. All open-source or free-tier.'},
+    costs:{icon:'\uD83D\uDCB0',title:'Unit Economics',desc:'Low infrastructure costs per client. High margins at scale.'},
+    ai:{icon:'\uD83E\uDDE0',title:'The Digital Manager',desc:'AI-powered 24/7 inquiry handling, lead qualification, and automated booking.'},
+    revenue:{icon:'\uD83D\uDCC8',title:'Revenue Model',desc:'3 client tiers from R$997 to R$4,997/mo + setup fees. 70-85% margin.'},
+    results:{icon:'\uD83C\uDFC6',title:'Results & ROI',desc:'Typical outcomes in the first 30-90 days.'},
+  };
+
+  /* ═══ PAN & ZOOM ═══ */
+  var canvas = document.getElementById('canvas');
+  var panX = -100, panY = -150, zoom = 0.9;
+  var isPanning = false, startX, startY;
+
+  function applyTransform(){
+    canvas.style.transform = 'translate('+panX+'px,'+panY+'px) scale('+zoom+')';
+    canvas.style.transformOrigin = '0 0';
+    drawConnections();
+    drawMinimap();
+  }
+
+  document.addEventListener('mousedown',function(e){
+    if(e.target.closest('#detail-panel')||e.target.closest('#controls')||e.target.closest('#minimap')||e.target.closest('#guide')) return;
+    if(e.target.closest('.node')) return;
+    isPanning = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+    document.body.classList.add('grabbing');
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!isPanning) return;
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    applyTransform();
+  });
+  document.addEventListener('mouseup',function(){isPanning=false;document.body.classList.remove('grabbing')});
+
+  var touchStartX,touchStartY,touchPanX,touchPanY;
+  document.addEventListener('touchstart',function(e){
+    if(e.target.closest('#detail-panel')||e.target.closest('.node')) return;
+    if(e.touches.length===1){touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY;touchPanX=panX;touchPanY=panY;}
+  },{passive:true});
+  document.addEventListener('touchmove',function(e){
+    if(e.target.closest('#detail-panel')) return;
+    if(e.touches.length===1){panX=touchPanX+(e.touches[0].clientX-touchStartX);panY=touchPanY+(e.touches[0].clientY-touchStartY);applyTransform();}
+  },{passive:true});
+
+  document.addEventListener('wheel',function(e){
+    if(e.target.closest('#detail-panel')) return;
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 0.92 : 1.08;
+    var newZoom = Math.min(2, Math.max(0.3, zoom * delta));
+    var mx = e.clientX, my = e.clientY;
+    panX = mx - (mx - panX) * (newZoom / zoom);
+    panY = my - (my - panY) * (newZoom / zoom);
+    zoom = newZoom;
+    applyTransform();
+  },{passive:false});
+
+  window.zoomIn = function(){ zoom = Math.min(2, zoom * 1.2); applyTransform(); };
+  window.zoomOut = function(){ zoom = Math.max(0.3, zoom * 0.8); applyTransform(); };
+  window.resetView = function(){ panX = -100; panY = -150; zoom = 0.9; applyTransform(); };
+
+  /* ═══ DRAW CONNECTIONS ═══ */
+  var svg = document.getElementById('connections');
+  function drawLine(a, b, cls){
+    var ar = a.getBoundingClientRect();
+    var br = b.getBoundingClientRect();
+    var line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', ar.left + ar.width/2);
+    line.setAttribute('y1', ar.top + ar.height/2);
+    line.setAttribute('x2', br.left + br.width/2);
+    line.setAttribute('y2', br.top + br.height/2);
+    if(cls) line.classList.add(cls);
+    line.dataset.from = a.id;
+    line.dataset.to = b.id;
+    svg.appendChild(line);
+  }
+  function drawConnections(){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.style.width = document.documentElement.scrollWidth + 'px';
+    svg.style.height = document.documentElement.scrollHeight + 'px';
+    TRACK_EDGES.forEach(function(e){
+      var a = document.getElementById(e[0]);
+      var b = document.getElementById(e[1]);
+      if(a&&b) drawLine(a, b, 'track-line');
+    });
+    BRANCH_EDGES.forEach(function(e){
+      var a = document.getElementById(e[0]);
+      var b = document.getElementById(e[1]);
+      if(a&&b) drawLine(a, b, null);
+    });
+  }
+
+  /* ═══ DETAIL PANEL ═══ */
+  var panel = document.getElementById('detail-panel');
+  var activeNode = null;
+
+  document.querySelectorAll('.node').forEach(function(node){
+    node.addEventListener('click',function(e){
+      e.stopPropagation();
+      var key = this.dataset.detail;
+      var builder = DETAILS[key];
+      var meta = META[key];
+      if(!builder || !meta){ closePanel(); return; }
+
+      if(activeNode) activeNode.classList.remove('active');
+      activeNode = this;
+      this.classList.add('active');
+
+      svg.querySelectorAll('line').forEach(function(l){
+        var isConn = l.dataset.from === node.id || l.dataset.to === node.id;
+        l.classList.toggle('active', isConn);
+      });
+
+      document.getElementById('dp-icon').textContent = meta.icon;
+      document.getElementById('dp-title').textContent = meta.title;
+      document.getElementById('dp-desc').textContent = meta.desc;
+      var body = document.getElementById('dp-body');
+      body.textContent = '';
+      builder(body);
+      panel.classList.add('open');
+    });
+  });
+
+  window.closePanel = function(){
+    panel.classList.remove('open');
+    if(activeNode) activeNode.classList.remove('active');
+    activeNode = null;
+    svg.querySelectorAll('line').forEach(function(l){ l.classList.remove('active'); });
+  };
+
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePanel(); });
+
+  /* ═══ MINIMAP ═══ */
+  var mmCanvas = document.getElementById('minimap-canvas');
+  var mmCtx = mmCanvas.getContext('2d');
+  function drawMinimap(){
+    var W=180,H=80;
+    mmCanvas.width=W;mmCanvas.height=H;
+    mmCtx.clearRect(0,0,W,H);
+    var nodes = document.querySelectorAll('.node');
+    var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    nodes.forEach(function(n){
+      var x=parseInt(n.style.left)||0,y=parseInt(n.style.top)||0;
+      if(x<minX) minX=x; if(y<minY) minY=y;
+      if(x+230>maxX) maxX=x+230; if(y+120>maxY) maxY=y+120;
+    });
+    var mapW=maxX-minX+200,mapH=maxY-minY+200;
+    var scale=Math.min(W/mapW,H/mapH);
+    // Draw track line on minimap
+    var phNodes = [document.getElementById('ph1'),document.getElementById('ph5')];
+    if(phNodes[0]&&phNodes[1]){
+      var tx1=(parseInt(phNodes[0].style.left)-minX+100+115)*scale;
+      var tx2=(parseInt(phNodes[1].style.left)-minX+100+115)*scale;
+      var ty=(parseInt(phNodes[0].style.top)-minY+100+60)*scale;
+      mmCtx.beginPath();mmCtx.moveTo(tx1,ty);mmCtx.lineTo(tx2,ty);
+      mmCtx.strokeStyle='rgba(91,141,239,0.25)';mmCtx.lineWidth=2;mmCtx.stroke();
+    }
+    nodes.forEach(function(n){
+      var x=(parseInt(n.style.left)-minX+100)*scale;
+      var y=(parseInt(n.style.top)-minY+100)*scale;
+      var isPh=n.classList.contains('node-phase'),isInf=n.classList.contains('node-info');
+      mmCtx.beginPath();
+      mmCtx.arc(x+(isPh?115*scale:80*scale),y+(isPh?60*scale:40*scale),isPh?4:isInf?2.5:1.5,0,Math.PI*2);
+      mmCtx.fillStyle=isPh?'#5b8def':isInf?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.15)';
+      mmCtx.fill();
+    });
+    var vx=(-panX/zoom-minX+100)*scale;
+    var vy=(-panY/zoom-minY+100)*scale;
+    var vw=(window.innerWidth/zoom)*scale;
+    var vh=(window.innerHeight/zoom)*scale;
+    mmCtx.strokeStyle='rgba(91,141,239,0.5)';
+    mmCtx.lineWidth=1;
+    mmCtx.strokeRect(vx,vy,vw,vh);
+  }
+
+  setTimeout(function(){
+    var g=document.getElementById('guide');g.style.opacity='0';
+    setTimeout(function(){g.style.display='none'},500);
+  },6000);
+
+  applyTransform();
+  window.addEventListener('resize',function(){drawConnections();drawMinimap()});
+})();
+</script>
+</body>
+</html>

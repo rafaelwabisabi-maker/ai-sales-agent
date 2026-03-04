@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Sales Chat Widget</title>
+<style>
+:root {
+  --sa-primary: #2563eb;
+  --sa-primary-dark: #1e40af;
+  --sa-bg: #ffffff;
+  --sa-text: #1f2937;
+  --sa-text-light: #6b7280;
+  --sa-border: #e5e7eb;
+  --sa-user-bg: #2563eb;
+  --sa-user-text: #ffffff;
+  --sa-bot-bg: #f3f4f6;
+  --sa-bot-text: #1f2937;
+  --sa-radius: 16px;
+  --sa-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  --sa-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+#sa-widget {
+  position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+  font-family: var(--sa-font);
+}
+#sa-trigger {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--sa-primary); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+#sa-trigger:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(37, 99, 235, 0.5); }
+#sa-trigger svg { width: 28px; height: 28px; fill: white; }
+#sa-trigger.open svg.chat-icon { display: none; }
+#sa-trigger.open svg.close-icon { display: block; }
+#sa-trigger:not(.open) svg.close-icon { display: none; }
+
+#sa-chat {
+  display: none; position: absolute; bottom: 76px; right: 0;
+  width: 380px; max-width: calc(100vw - 32px);
+  height: 560px; max-height: calc(100vh - 120px);
+  background: var(--sa-bg); border-radius: var(--sa-radius);
+  box-shadow: var(--sa-shadow); flex-direction: column;
+  overflow: hidden; border: 1px solid var(--sa-border);
+}
+#sa-chat.visible { display: flex; }
+
+#sa-header {
+  background: var(--sa-primary); color: white;
+  padding: 16px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+#sa-header-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); display: flex;
+  align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+#sa-header-info h3 { font-size: 15px; font-weight: 600; }
+#sa-header-info p { font-size: 12px; opacity: 0.85; }
+
+#sa-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.sa-msg {
+  max-width: 85%; padding: 10px 14px; border-radius: 16px;
+  font-size: 14px; line-height: 1.5; word-wrap: break-word;
+  animation: sa-fadeIn 0.3s ease;
+}
+@keyframes sa-fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sa-msg.bot { align-self: flex-start; background: var(--sa-bot-bg); color: var(--sa-bot-text); border-bottom-left-radius: 4px; }
+.sa-msg.user { align-self: flex-end; background: var(--sa-user-bg); color: var(--sa-user-text); border-bottom-right-radius: 4px; }
+.sa-msg.system { align-self: center; background: #fef3c7; color: #92400e; font-size: 13px; border-radius: 8px; text-align: center; }
+
+.sa-typing { display: flex; gap: 4px; padding: 12px 16px; align-self: flex-start; background: var(--sa-bot-bg); border-radius: 16px; border-bottom-left-radius: 4px; }
+.sa-typing span { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; animation: sa-bounce 1.4s infinite; }
+.sa-typing span:nth-child(2) { animation-delay: 0.2s; }
+.sa-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes sa-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+.sa-booking-card {
+  align-self: flex-start; background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; max-width: 90%;
+  animation: sa-fadeIn 0.3s ease;
+}
+.sa-booking-card h4 { font-size: 14px; font-weight: 600; color: var(--sa-primary-dark); margin-bottom: 8px; }
+.sa-booking-card p { font-size: 13px; color: var(--sa-text-light); margin-bottom: 12px; }
+.sa-booking-btn {
+  display: inline-block; padding: 10px 20px; background: var(--sa-primary);
+  color: white; border: none; border-radius: 8px; font-size: 14px;
+  font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.2s;
+}
+.sa-booking-btn:hover { background: var(--sa-primary-dark); }
+
+#sa-input-area {
+  padding: 12px 16px; border-top: 1px solid var(--sa-border);
+  display: flex; gap: 8px; align-items: center; flex-shrink: 0; background: var(--sa-bg);
+}
+#sa-input {
+  flex: 1; border: 1px solid var(--sa-border); border-radius: 24px;
+  padding: 10px 16px; font-size: 14px; font-family: var(--sa-font);
+  outline: none; transition: border-color 0.2s; resize: none; max-height: 80px; line-height: 1.4;
+}
+#sa-input:focus { border-color: var(--sa-primary); }
+#sa-send {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--sa-primary);
+  border: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; transition: background 0.2s;
+}
+#sa-send:hover { background: var(--sa-primary-dark); }
+#sa-send:disabled { background: #d1d5db; cursor: not-allowed; }
+#sa-send svg { width: 18px; height: 18px; fill: white; }
+
+#sa-powered {
+  text-align: center; padding: 6px; font-size: 11px;
+  color: var(--sa-text-light); background: #fafafa;
+  border-top: 1px solid var(--sa-border); flex-shrink: 0;
+}
+#sa-powered a { color: var(--sa-primary); text-decoration: none; }
+
+@media (max-width: 480px) {
+  #sa-chat { width: calc(100vw - 16px); height: calc(100vh - 100px); bottom: 72px; right: -16px; border-radius: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div id="sa-widget">
+  <div id="sa-chat">
+    <div id="sa-header">
+      <div id="sa-header-avatar">💬</div>
+      <div id="sa-header-info">
+        <h3 id="sa-company-name">Sales Agent</h3>
+        <p>Connecting...</p>
+      </div>
+    </div>
+    <div id="sa-messages"></div>
+    <div id="sa-input-area">
+      <textarea id="sa-input" placeholder="Type your message..." rows="1"></textarea>
+      <button id="sa-send" disabled>
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div id="sa-powered">Powered by <a href="#" target="_blank">AI Sales Agent</a></div>
+  </div>
+
+  <button id="sa-trigger">
+    <svg class="chat-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+    <svg class="close-icon" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  </button>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Auto-detect API URL: if served by the Express server, use same origin
+  var detectedApiUrl = window.location.origin && window.location.origin !== 'null'
+    ? window.location.origin
+    : 'http://localhost:3001';
+
+  var DEFAULT_CONFIG = {
+    apiUrl: detectedApiUrl,
+    companyName: 'AI Sales Agent',
+    primaryColor: '#2563eb',
+    position: 'bottom-right',
+    triggerDelay: 3000
+  };
+
+  var CONFIG = Object.assign({}, DEFAULT_CONFIG, window.SA_CONFIG || {});
+
+  // Listen for config from parent iframe (embed.js sends this via postMessage)
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SA_CONFIG') {
+      Object.assign(CONFIG, event.data.config);
+      applyConfig();
+    }
+  });
+
+  var STORAGE_KEY = 'sa_conversation_id';
+  var conversationId = null;
+  var isOpen = false;
+  var isLoading = false;
+  var isRecovered = false;
+  var backendOnline = false;
+  var statusEl = document.querySelector('#sa-header-info p');
+
+  var widget = document.getElementById('sa-widget');
+  var chat = document.getElementById('sa-chat');
+  var trigger = document.getElementById('sa-trigger');
+  var messagesEl = document.getElementById('sa-messages');
+  var input = document.getElementById('sa-input');
+  var sendBtn = document.getElementById('sa-send');
+  var companyNameEl = document.getElementById('sa-company-name');
+
+  function applyConfig() {
+    document.documentElement.style.setProperty('--sa-primary', CONFIG.primaryColor);
+    companyNameEl.textContent = CONFIG.companyName;
+    if (CONFIG.position === 'bottom-left') {
+      widget.style.right = 'auto';
+      widget.style.left = '24px';
+      chat.style.right = 'auto';
+      chat.style.left = '0';
+    }
+  }
+
+  function saveConversationId(id) {
+    try { localStorage.setItem(STORAGE_KEY, id); } catch(e) {}
+  }
+
+  function getSavedConversationId() {
+    try { return localStorage.getItem(STORAGE_KEY); } catch(e) { return null; }
+  }
+
+  function clearSavedConversation() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  }
+
+  async function recoverConversation() {
+    var savedId = getSavedConversationId();
+    if (!savedId) return false;
+
+    try {
+      var res = await fetch(CONFIG.apiUrl + '/api/conversations/' + savedId + '/exists');
+      var data = await res.json();
+      if (!data.exists) { clearSavedConversation(); return false; }
+
+      // Fetch full conversation with messages
+      res = await fetch(CONFIG.apiUrl + '/api/conversations/' + savedId);
+      data = await res.json();
+
+      conversationId = savedId;
+      isRecovered = true;
+
+      // Render existing messages
+      data.messages.forEach(function(msg) {
+        addMessage(msg.role === 'assistant' ? 'bot' : msg.role, msg.content);
+      });
+
+      // If conversation ended, disable input
+      if (data.phase === 'ended') {
+        input.disabled = true;
+        input.placeholder = 'Conversation ended';
+        sendBtn.disabled = true;
+      }
+
+      return true;
+    } catch(err) {
+      clearSavedConversation();
+      return false;
+    }
+  }
+
+  async function startConversation() {
+    // Try to recover existing conversation first
+    var recovered = await recoverConversation();
+    if (recovered) return;
+
+    try {
+      var res = await fetch(CONFIG.apiUrl + '/api/conversations', { method: 'POST' });
+      var data = await res.json();
+      conversationId = data.conversationId;
+      saveConversationId(conversationId);
+      addMessage('bot', data.message);
+    } catch (err) {
+      backendOnline = false;
+      if (statusEl) statusEl.textContent = 'Offline';
+      addMessage('system', 'Unable to connect to server. Please check back in a moment.');
+    }
+  }
+
+  async function sendMessage(text) {
+    if (!conversationId || isLoading) return;
+    isLoading = true;
+    sendBtn.disabled = true;
+    addMessage('user', text);
+    showTyping();
+
+    try {
+      var res = await fetch(CONFIG.apiUrl + '/api/conversations/' + conversationId + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      var data = await res.json();
+      hideTyping();
+      addMessage('bot', data.message);
+      if (data.actions) { data.actions.forEach(handleAction); }
+    } catch (err) {
+      hideTyping();
+      addMessage('system', 'Message failed to send. Check your connection and try again.');
+    } finally {
+      isLoading = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  function handleAction(action) {
+    if (action.type === 'SHOW_BOOKING') {
+      showBookingCard(action.bookingLink, action.duration);
+    } else if (action.type === 'CONVERSATION_ENDED') {
+      input.disabled = true;
+      input.placeholder = 'Conversation ended';
+      sendBtn.disabled = true;
+      clearSavedConversation();
+    }
+  }
+
+  function showBookingCard(link, duration) {
+    var card = document.createElement('div');
+    card.className = 'sa-booking-card';
+
+    var h4 = document.createElement('h4');
+    h4.textContent = 'Book Your Discovery Call';
+
+    var p = document.createElement('p');
+    p.textContent = duration + ' minutes \u2014 no commitment, just a conversation about your needs.';
+
+    var a = document.createElement('a');
+    a.href = link;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'sa-booking-btn';
+    a.textContent = 'Choose a Time \u2192';
+
+    card.appendChild(h4);
+    card.appendChild(p);
+    card.appendChild(a);
+    messagesEl.appendChild(card);
+    scrollToBottom();
+  }
+
+  function addMessage(type, text) {
+    var div = document.createElement('div');
+    div.className = 'sa-msg ' + type;
+    div.textContent = text;
+    messagesEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function showTyping() {
+    var typing = document.createElement('div');
+    typing.className = 'sa-typing';
+    typing.id = 'sa-typing-indicator';
+    for (var i = 0; i < 3; i++) {
+      typing.appendChild(document.createElement('span'));
+    }
+    messagesEl.appendChild(typing);
+    scrollToBottom();
+  }
+
+  function hideTyping() {
+    var el = document.getElementById('sa-typing-indicator');
+    if (el) el.remove();
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(function() { messagesEl.scrollTop = messagesEl.scrollHeight; });
+  }
+
+  function toggleChat() {
+    isOpen = !isOpen;
+    chat.classList.toggle('visible', isOpen);
+    trigger.classList.toggle('open', isOpen);
+    if (isOpen && !conversationId) startConversation();
+    if (isOpen) setTimeout(function() { input.focus(); }, 100);
+
+    // Notify parent embed.js to resize iframe (fixes pointer-events blocking)
+    try {
+      window.parent.postMessage({ type: 'SA_WIDGET_STATE', open: isOpen }, '*');
+    } catch (e) {}
+  }
+
+  function autoResize() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 80) + 'px';
+    sendBtn.disabled = !input.value.trim() || isLoading;
+  }
+
+  trigger.addEventListener('click', toggleChat);
+  input.addEventListener('input', autoResize);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      var text = input.value.trim();
+      if (text && !isLoading) { input.value = ''; autoResize(); sendMessage(text); }
+    }
+  });
+  sendBtn.addEventListener('click', function() {
+    var text = input.value.trim();
+    if (text && !isLoading) { input.value = ''; autoResize(); sendMessage(text); }
+  });
+
+  applyConfig();
+
+  // Health check + config fetch on init
+  fetch(CONFIG.apiUrl + '/api/config')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      backendOnline = true;
+      if (statusEl) statusEl.textContent = 'Online now';
+      if (data.company && data.company.name) companyNameEl.textContent = data.company.name;
+      if (data.widget && data.widget.primaryColor) {
+        document.documentElement.style.setProperty('--sa-primary', data.widget.primaryColor);
+      }
+    })
+    .catch(function() {
+      backendOnline = false;
+      if (statusEl) statusEl.textContent = 'Connecting...';
+    });
+})();
+</script>
+</body>
+</html>

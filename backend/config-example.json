@@ -1,0 +1,62 @@
+{
+  "company": {
+    "name": "AnimaRH",
+    "tagline": "Executive recruitment that actually works",
+    "services": [
+      {
+        "name": "Executive Search",
+        "description": "Targeted headhunting for C-level and director positions",
+        "priceRange": "Starting at R$15,000",
+        "idealFor": "Companies needing senior leadership hires"
+      },
+      {
+        "name": "Recruitment Process Outsourcing",
+        "description": "Full recruitment pipeline management",
+        "priceRange": "Starting at R$8,000/month",
+        "idealFor": "Companies with 5+ open positions"
+      }
+    ],
+    "differentiators": [
+      "AI-powered candidate scoring and matching",
+      "Direct headhunting — we don't wait for applications",
+      "Average time-to-shortlist: 5 business days",
+      "Specialized in industrial and engineering sectors"
+    ],
+    "targetMarket": "Mid-to-large companies in Brazil (SP, PR, SC, RS)",
+    "language": "pt-BR"
+  },
+  "widget": {
+    "primaryColor": "#2563eb",
+    "accentColor": "#1e40af",
+    "position": "bottom-right",
+    "greeting": "Olá! Posso ajudar você a encontrar os melhores talentos para sua empresa?",
+    "avatarUrl": "",
+    "triggerDelay": 3000,
+    "showOnMobile": true
+  },
+  "booking": {
+    "provider": "calcom",
+    "link": "https://cal.com/your-username/discovery-call",
+    "duration": 30,
+    "title": "Discovery Call — AnimaRH"
+  },
+  "qualification": {
+    "minScore": 60,
+    "criteria": {
+      "hasOpenPositions": { "weight": 30, "question": "Do they have active hiring needs?" },
+      "budgetFit": { "weight": 25, "question": "Can they afford our services?" },
+      "decisionMaker": { "weight": 25, "question": "Are we talking to a decision maker?" },
+      "timeline": { "weight": 20, "question": "Do they need hires within 90 days?" }
+    }
+  },
+  "model": "claude-haiku-4-5-20250929",
+  "limits": {
+    "maxMessages": 30,
+    "maxTokens": 500
+  },
+  "webhooks": {
+    "onLeadCaptured": "https://your-n8n.example.com/webhook/lead-captured",
+    "onBookingMade": "https://your-n8n.example.com/webhook/booking-made",
+    "onConversationEnd": "https://your-n8n.example.com/webhook/conversation-end"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "_instructions": "Fill this template using the client's answers from docs/CLIENT-ONBOARDING.md questionnaire. Fields marked REQUIRED must be filled. Fields marked OPTIONAL have sensible defaults.",
+
+  "company": {
+    "name": "{{COMPANY_NAME}}",
+    "tagline": "{{TAGLINE — one sentence}}",
+    "services": [
+      {
+        "name": "{{SERVICE_1_NAME}}",
+        "description": "{{SERVICE_1_DESCRIPTION}}",
+        "priceRange": "{{SERVICE_1_PRICE_RANGE}}",
+        "idealFor": "{{SERVICE_1_IDEAL_FOR}}"
+      }
+    ],
+    "differentiators": [
+      "{{DIFFERENTIATOR_1}}",
+      "{{DIFFERENTIATOR_2}}",
+      "{{DIFFERENTIATOR_3}}"
+    ],
+    "targetMarket": "{{TARGET_MARKET — who are ideal clients}}",
+    "language": "{{LANGUAGE — pt-BR / en / es / de}}"
+  },
+
+  "widget": {
+    "primaryColor": "{{PRIMARY_COLOR — hex, e.g. #2563eb}}",
+    "accentColor": "{{ACCENT_COLOR — hex, e.g. #1e40af}}",
+    "position": "bottom-right",
+    "greeting": "{{GREETING — first message the bot sends}}",
+    "avatarUrl": "",
+    "triggerDelay": 3000,
+    "showOnMobile": true
+  },
+
+  "booking": {
+    "provider": "calcom",
+    "link": "{{CALCOM_LINK — e.g. https://cal.com/username/discovery-call}}",
+    "duration": 30,
+    "title": "{{CALL_TITLE — e.g. Discovery Call — CompanyName}}"
+  },
+
+  "qualification": {
+    "minScore": 60,
+    "criteria": {
+      "hasOpenPositions": { "weight": 30, "question": "{{CRITERIA_1_QUESTION — main buying signal}}" },
+      "budgetFit": { "weight": 25, "question": "{{CRITERIA_2_QUESTION — can they afford it}}" },
+      "decisionMaker": { "weight": 25, "question": "{{CRITERIA_3_QUESTION — are they the decision maker}}" },
+      "timeline": { "weight": 20, "question": "{{CRITERIA_4_QUESTION — urgency/timeline}}" }
+    }
+  },
+
+  "objectionHandling": {
+    "_note": "Paste client's answers from Onboarding Q4. The AI uses these to handle pushback.",
+    "tooExpensive": "{{OBJECTION_RESPONSE_PRICE}}",
+    "needToThink": "{{OBJECTION_RESPONSE_THINK}}",
+    "doItMyself": "{{OBJECTION_RESPONSE_DIY}}",
+    "badExperience": "{{OBJECTION_RESPONSE_BAD_EXP}}",
+    "notRightTime": "{{OBJECTION_RESPONSE_TIMING}}"
+  },
+
+  "faq": [
+    { "question": "{{FAQ_1_Q}}", "answer": "{{FAQ_1_A}}" },
+    { "question": "{{FAQ_2_Q}}", "answer": "{{FAQ_2_A}}" }
+  ],
+
+  "boundaries": {
+    "_note": "From Onboarding Q9 — what the bot should NOT do/say",
+    "doNotOffer": ["{{SERVICE_NOT_OFFERED_1}}"],
+    "doNotServe": ["{{CLIENT_TYPE_NOT_SERVED_1}}"],
+    "doNotAnswer": ["{{QUESTION_NOT_TO_ANSWER_1}}"]
+  },
+
+  "availability": {
+    "_note": "OPTIONAL — set enabled:true to inject real Cal.com slots into AI conversations. Requires CALCOM_API_KEY, CALCOM_EVENT_SLUG, CALCOM_USERNAME env vars.",
+    "enabled": false,
+    "defaultTimeZone": "{{TIMEZONE — e.g. Europe/Vienna, America/Sao_Paulo}}",
+    "lookAheadDays": 14
+  },
+
+  "followUp": {
+    "_note": "OPTIONAL — set enabled:true to auto-trigger follow-up webhooks for leads who don't book. Requires webhooks.onFollowUpDue URL.",
+    "enabled": false,
+    "intervals": [24, 48]
+  },
+
+  "model": "claude-haiku-4-5-20251001",
+  "limits": {
+    "maxMessages": 30,
+    "maxTokens": 500
+  },
+
+  "webhooks": {
+    "onLeadCaptured": "{{N8N_WEBHOOK_URL}}/webhook/{{CLIENT_ID}}-lead-captured",
+    "onBookingMade": "{{N8N_WEBHOOK_URL}}/webhook/{{CLIENT_ID}}-booking-made",
+    "onConversationEnd": "{{N8N_WEBHOOK_URL}}/webhook/{{CLIENT_ID}}-conversation-end",
+    "onFollowUpDue": "{{N8N_WEBHOOK_URL}}/webhook/{{CLIENT_ID}}-follow-up-due"
+  }
+}

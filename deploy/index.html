@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SalesAgent — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f8f9fb;--surface:#fff;--surface2:#f1f3f7;
+  --border:#e4e7ec;--border-light:#eef0f4;
+  --text:#1a1d26;--text2:#5a6178;--text3:#9098ad;
+  --accent:#4f46e5;--accent-light:#eef2ff;--accent-bg:rgba(79,70,229,0.08);
+  --green:#16a34a;--green-bg:rgba(22,163,74,0.08);--green-light:#f0fdf4;
+  --orange:#ea580c;--orange-bg:rgba(234,88,12,0.08);
+  --red:#dc2626;--red-bg:rgba(220,38,38,0.06);
+  --yellow:#ca8a04;--yellow-bg:rgba(202,138,4,0.08);
+  --radius:10px;--radius-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg:0 4px 20px rgba(0,0,0,0.08);
+  --font:'DM Sans',system-ui,-apple-system,sans-serif;
+}
+html{font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;display:flex}
+
+/* ===== SIDEBAR ===== */
+.sidebar{
+  width:240px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:50;
+}
+.sidebar-logo{
+  padding:20px 20px 16px;font-size:17px;font-weight:700;letter-spacing:-0.3px;
+  display:flex;align-items:center;gap:10px;
+}
+.sidebar-logo .logo-icon{
+  width:32px;height:32px;border-radius:8px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;
+}
+.sidebar-nav{flex:1;padding:0 10px;display:flex;flex-direction:column;gap:2px}
+.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);padding:16px 10px 6px;font-weight:600}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+  cursor:pointer;font-size:13.5px;font-weight:500;color:var(--text2);transition:all 0.15s;
+  border:1px solid transparent;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-light);color:var(--accent);border-color:rgba(79,70,229,0.12);font-weight:600}
+.nav-item .nav-icon{width:18px;text-align:center;font-size:15px;flex-shrink:0}
+.nav-item .nav-badge{
+  margin-left:auto;font-size:11px;font-weight:600;
+  background:var(--accent);color:#fff;padding:1px 7px;border-radius:10px;
+}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+
+/* ===== MAIN ===== */
+.main{margin-left:240px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+
+/* Top bar */
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.topbar-title{font-size:16px;font-weight:600;letter-spacing:-0.2px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar-status{
+  font-size:12px;color:var(--green);display:flex;align-items:center;gap:6px;
+  background:var(--green-bg);padding:5px 12px;border-radius:20px;font-weight:500;
+}
+.topbar-status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* Content area */
+.content{flex:1;padding:24px 28px;overflow-y:auto}
+
+/* Page hide/show */
+.page{display:none}
+.page.active{display:block}
+
+/* ===== CARDS ===== */
+.cards-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:20px;box-shadow:var(--shadow);
+}
+.card-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:500;margin-bottom:8px}
+.card-value{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1.2}
+.card-sub{font-size:12px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:4px}
+.card-sub .up{color:var(--green)}
+.card-sub .down{color:var(--red)}
+
+/* ===== TABLE ===== */
+.table-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.table-header{
+  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.table-header h3{font-size:14px;font-weight:600}
+.table-header .count{font-size:12px;color:var(--text3);font-weight:400;margin-left:8px}
+table{width:100%;border-collapse:collapse}
+th{
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.8px;
+  color:var(--text3);font-weight:600;padding:10px 16px;border-bottom:1px solid var(--border);
+  background:var(--surface2);
+}
+td{padding:12px 16px;border-bottom:1px solid var(--border-light);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(79,70,229,0.02)}
+
+/* Badges */
+.badge{
+  display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;
+  font-size:11.5px;font-weight:600;letter-spacing:0.2px;
+}
+.badge-new{background:var(--accent-bg);color:var(--accent)}
+.badge-qualified{background:var(--green-bg);color:var(--green)}
+.badge-booked{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.badge-nurture{background:var(--yellow-bg);color:var(--yellow)}
+.badge-lost{background:var(--red-bg);color:var(--red)}
+.badge-hot{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+
+.score{
+  display:inline-flex;align-items:center;justify-content:center;width:36px;height:24px;
+  border-radius:6px;font-size:12px;font-weight:700;
+}
+.score-high{background:var(--green-bg);color:var(--green)}
+.score-mid{background:var(--yellow-bg);color:var(--yellow)}
+.score-low{background:var(--red-bg);color:var(--red)}
+
+/* ===== ACTIVITY FEED ===== */
+.feed{display:flex;flex-direction:column;gap:0}
+.feed-item{
+  display:flex;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border-light);
+  font-size:13px;transition:background 0.15s;
+}
+.feed-item:last-child{border-bottom:none}
+.feed-item:hover{background:var(--surface2)}
+.feed-dot{
+  width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0;
+}
+.feed-dot.green{background:var(--green)}
+.feed-dot.blue{background:var(--accent)}
+.feed-dot.orange{background:var(--orange)}
+.feed-dot.red{background:var(--red)}
+.feed-text{flex:1}
+.feed-text strong{font-weight:600}
+.feed-time{font-size:11px;color:var(--text3);white-space:nowrap;margin-top:2px}
+
+/* ===== CONVERSATION VIEW ===== */
+.conv-layout{display:grid;grid-template-columns:300px 1fr;gap:0;height:calc(100vh - 130px)}
+.conv-list{
+  border-right:1px solid var(--border);overflow-y:auto;
+  background:var(--surface);border-radius:var(--radius-lg) 0 0 var(--radius-lg);
+  border:1px solid var(--border);border-right:none;
+}
+.conv-list-header{padding:16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600}
+.conv-item{
+  padding:14px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:all 0.15s;
+}
+.conv-item:hover{background:var(--surface2)}
+.conv-item.active{background:var(--accent-light);border-left:3px solid var(--accent)}
+.conv-item-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.conv-item-preview{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-item-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.conv-item-time{font-size:11px;color:var(--text3)}
+
+.conv-detail{
+  background:var(--surface);border:1px solid var(--border);border-left:none;
+  border-radius:0 var(--radius-lg) var(--radius-lg) 0;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.conv-detail-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.conv-detail-header h3{font-size:14px;font-weight:600}
+.conv-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
+.conv-msg{max-width:80%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.55}
+.conv-msg.bot{align-self:flex-start;background:var(--surface2);border-bottom-left-radius:4px}
+.conv-msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.conv-msg.system{
+  align-self:center;background:var(--green-light);color:var(--green);
+  font-size:12px;border-radius:8px;font-weight:500;
+}
+
+/* ===== TEST AGENT ===== */
+.test-layout{display:grid;grid-template-columns:1fr 380px;gap:20px;height:calc(100vh - 130px)}
+.test-info{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;overflow-y:auto;box-shadow:var(--shadow);
+}
+.test-info h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.test-info p{font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6}
+.info-block{
+  background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:12px;
+}
+.info-block h4{font-size:12px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:8px;font-weight:600}
+.info-block ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.info-block li{font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px}
+.info-block li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+.test-chat{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow);
+}
+.test-chat-header{
+  background:var(--accent);padding:16px 18px;
+  display:flex;align-items:center;gap:12px;
+}
+.test-chat-header .avatar{
+  width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.test-chat-header h4{font-size:14px;font-weight:600;color:#fff}
+.test-chat-header p{font-size:11px;color:rgba(255,255,255,0.7)}
+.test-messages{
+  flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;
+  background:var(--bg);
+}
+.test-msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.55}
+.test-msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}
+.test-msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.test-msg.system{
+  align-self:center;background:var(--green-light);color:var(--green);font-size:12px;
+  border-radius:8px;padding:8px 14px;font-weight:500;
+}
+.typing-dots{
+  display:flex;gap:4px;padding:12px 16px;align-self:flex-start;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;border-bottom-left-radius:4px;
+}
+.typing-dots span{width:7px;height:7px;border-radius:50%;background:var(--text3);animation:dot-bounce 1.4s infinite}
+.typing-dots span:nth-child(2){animation-delay:0.15s}
+.typing-dots span:nth-child(3){animation-delay:0.3s}
+@keyframes dot-bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-4px);opacity:1}}
+
+.test-input-area{
+  padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--surface);
+}
+.test-input{
+  flex:1;border:1px solid var(--border);border-radius:20px;padding:9px 16px;
+  font-size:13px;font-family:var(--font);outline:none;background:var(--bg);
+  transition:border-color 0.2s;color:var(--text);
+}
+.test-input:focus{border-color:var(--accent)}
+.test-input::placeholder{color:var(--text3)}
+.test-send{
+  width:36px;height:36px;border-radius:50%;background:var(--accent);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background 0.2s;flex-shrink:0;
+}
+.test-send:hover{background:#4338ca}
+.test-send svg{width:16px;height:16px;fill:#fff}
+
+/* ===== SETTINGS ===== */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.settings-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;box-shadow:var(--shadow);
+}
+.settings-card h3{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+.form-group input,.form-group textarea,.form-group select{
+  width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;
+  font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);outline:none;
+  transition:border-color 0.2s;
+}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:60px}
+
+.btn-sm{
+  padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1px solid var(--border);background:var(--surface);
+  font-family:var(--font);color:var(--text);transition:all 0.15s;
+}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-accent:hover{background:#4338ca;border-color:#4338ca;color:#fff}
+
+/* ===== GOALS & TASKS PAGES ===== */
+.milestone-track{display:flex;flex-direction:column;gap:0;position:relative;padding-left:28px}
+.milestone-track::before{content:'';position:absolute;left:11px;top:8px;bottom:8px;width:2px;background:var(--border)}
+.milestone{position:relative;padding:16px 0 16px 20px}
+.milestone-dot{
+  position:absolute;left:-28px;top:18px;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  background:var(--surface);border:2px solid var(--border);z-index:1;
+}
+.milestone.done .milestone-dot{background:var(--green);border-color:var(--green);color:#fff}
+.milestone.active .milestone-dot{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 4px var(--accent-bg)}
+.milestone.upcoming .milestone-dot{background:var(--surface2);border-color:var(--border);color:var(--text3)}
+.milestone h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.milestone.done h4{color:var(--green)}
+.milestone.active h4{color:var(--accent)}
+.milestone.upcoming h4{color:var(--text3)}
+.milestone p{font-size:12.5px;color:var(--text2);line-height:1.5}
+.milestone .ml-tag{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:6px}
+.milestone.done .ml-tag{background:var(--green-bg);color:var(--green)}
+.milestone.active .ml-tag{background:var(--accent-bg);color:var(--accent)}
+.milestone.upcoming .ml-tag{background:var(--surface2);color:var(--text3)}
+
+.task-list{display:flex;flex-direction:column;gap:2px}
+.task-item{
+  display:flex;align-items:flex-start;gap:12px;padding:14px 18px;
+  border-radius:10px;transition:background 0.15s;cursor:default;
+}
+.task-item:hover{background:var(--surface2)}
+.task-check{
+  width:20px;height:20px;border-radius:6px;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;margin-top:1px;transition:all 0.15s;font-size:12px;color:transparent;
+}
+.task-check:hover{border-color:var(--accent)}
+.task-check.checked{background:var(--green);border-color:var(--green);color:#fff}
+.task-body{flex:1}
+.task-title{font-size:13.5px;font-weight:500}
+.task-check.checked+.task-body .task-title{text-decoration:line-through;color:var(--text3)}
+.task-meta{font-size:11.5px;color:var(--text3);margin-top:3px;display:flex;gap:12px}
+.task-priority{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:4px}
+.task-priority.high{background:var(--red-bg);color:var(--red)}
+.task-priority.med{background:var(--orange-bg);color:var(--orange)}
+.task-priority.low{background:var(--surface2);color:var(--text3)}
+
+/* ===== FLOATING HELP BOT ===== */
+#helpbot{position:fixed;bottom:24px;right:24px;z-index:9999}
+#helpbot-trigger{
+  width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 24px rgba(79,70,229,0.35);transition:all 0.2s;font-size:22px;
+  animation:hb-pulse 3s infinite;
+}
+@keyframes hb-pulse{0%,100%{box-shadow:0 4px 24px rgba(79,70,229,0.35)}50%{box-shadow:0 4px 32px rgba(79,70,229,0.5)}}
+#helpbot-trigger:hover{transform:scale(1.08);animation:none;box-shadow:0 4px 32px rgba(79,70,229,0.5)}
+#helpbot-trigger.open{animation:none}
+#helpbot-trigger.open .hb-icon-chat{display:none}
+#helpbot-trigger.open .hb-icon-close{display:block}
+#helpbot-trigger:not(.open) .hb-icon-close{display:none}
+#helpbot-teaser{
+  position:absolute;bottom:64px;right:0;background:var(--surface);
+  padding:10px 16px;border-radius:12px 12px 4px 12px;box-shadow:var(--shadow-lg);
+  border:1px solid var(--border);font-size:12.5px;color:var(--text);
+  white-space:nowrap;opacity:0;transform:translateY(8px);transition:all 0.4s ease;
+  pointer-events:none;
+}
+#helpbot-teaser.visible{opacity:1;transform:translateY(0)}
+#helpbot-teaser::after{
+  content:'';position:absolute;bottom:-6px;right:18px;width:12px;height:12px;
+  background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  transform:rotate(45deg);
+}
+#helpbot-win{
+  display:none;position:absolute;bottom:68px;right:0;width:340px;max-width:calc(100vw - 32px);
+  height:460px;max-height:calc(100vh - 120px);background:var(--surface);border-radius:16px;
+  box-shadow:0 16px 60px rgba(0,0,0,0.15);border:1px solid var(--border);
+  flex-direction:column;overflow:hidden;animation:hb-up 0.3s ease;
+}
+@keyframes hb-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+#helpbot-win.visible{display:flex}
+#helpbot-header{
+  background:var(--accent);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+#helpbot-header h4{font-size:13px;font-weight:600;color:#fff}
+#helpbot-header p{font-size:11px;color:rgba(255,255,255,0.7)}
+#helpbot-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+#helpbot-msgs::-webkit-scrollbar{width:3px}
+#helpbot-msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.hb-msg{max-width:88%;padding:9px 13px;border-radius:14px;font-size:12.5px;line-height:1.55}
+.hb-msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}
+.hb-msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.hb-chips{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;animation:msg-in 0.3s ease}
+.hb-chip{
+  font-size:11.5px;padding:6px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);font-family:var(--font);transition:all 0.15s;
+}
+.hb-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.hb-typing{display:flex;gap:4px;padding:10px 14px;align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:14px;border-bottom-left-radius:4px}
+.hb-typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:dot-bounce 1.4s infinite}
+.hb-typing span:nth-child(2){animation-delay:0.15s}
+.hb-typing span:nth-child(3){animation-delay:0.3s}
+#helpbot-input-area{padding:10px;border-top:1px solid var(--border);display:flex;gap:6px;background:var(--surface)}
+#helpbot-input{
+  flex:1;border:1px solid var(--border);border-radius:18px;padding:8px 14px;font-size:12.5px;
+  font-family:var(--font);outline:none;background:var(--bg);color:var(--text);
+}
+#helpbot-input:focus{border-color:var(--accent)}
+#helpbot-input::placeholder{color:var(--text3)}
+#helpbot-send{
+  width:32px;height:32px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+#helpbot-send svg{width:14px;height:14px;fill:#fff}
+
+/* Responsive */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .conv-layout{grid-template-columns:1fr}
+  .conv-detail{display:none}
+  .test-layout{grid-template-columns:1fr}
+  .test-info{display:none}
+  .settings-grid{grid-template-columns:1fr}
+  #page-goals>div{grid-template-columns:1fr!important}
+  #page-tasks>div{grid-template-columns:1fr!important}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">S</div>
+    SalesAgent
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+    <div class="nav-item" data-page="leads"><span class="nav-icon">👥</span>Leads<span class="nav-badge">23</span></div>
+    <div class="nav-item" data-page="conversations"><span class="nav-icon">💬</span>Conversations<span class="nav-badge">3</span></div>
+    <div class="nav-section">Growth</div>
+    <div class="nav-item" data-page="goals"><span class="nav-icon">🎯</span>Goals & Roadmap</div>
+    <div class="nav-item" data-page="tasks"><span class="nav-icon">✅</span>Tasks<span class="nav-badge">5</span></div>
+    <div class="nav-section">Tools</div>
+    <div class="nav-item" data-page="test-agent"><span class="nav-icon">🤖</span>Test Agent</div>
+    <div class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span>Settings</div>
+  </nav>
+  <div class="sidebar-footer">SalesAgent v1.0 MVP</div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <div class="topbar-status">Agent Online</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="cards-row">
+        <div class="card">
+          <div class="card-label">Total Leads</div>
+          <div class="card-value">23</div>
+          <div class="card-sub"><span class="up">+5</span> this week</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Qualified</div>
+          <div class="card-value" style="color:var(--green)">14</div>
+          <div class="card-sub">61% qualification rate</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Calls Booked</div>
+          <div class="card-value" style="color:var(--accent)">8</div>
+          <div class="card-sub"><span class="up">+3</span> this week</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Avg Cost / Lead</div>
+          <div class="card-value">$0.42</div>
+          <div class="card-sub">Only API costs</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- Recent Activity -->
+        <div class="table-wrap">
+          <div class="table-header"><h3>Recent Activity</h3></div>
+          <div class="feed">
+            <div class="feed-item"><div class="feed-dot green"></div><div class="feed-text"><strong>Carla Mendes</strong> booked a discovery call for Thu 2pm</div><div class="feed-time">12 min ago</div></div>
+            <div class="feed-item"><div class="feed-dot blue"></div><div class="feed-text"><strong>Pedro Almeida</strong> started a conversation — qualified (score 82)</div><div class="feed-time">34 min ago</div></div>
+            <div class="feed-item"><div class="feed-dot orange"></div><div class="feed-text"><strong>Ana Ferreira</strong> asked about pricing — needs follow-up</div><div class="feed-time">1h ago</div></div>
+            <div class="feed-item"><div class="feed-dot green"></div><div class="feed-text"><strong>Marcos Vieira</strong> booked a call for Fri 10am</div><div class="feed-time">2h ago</div></div>
+            <div class="feed-item"><div class="feed-dot blue"></div><div class="feed-text"><strong>Juliana Costa</strong> completed conversation — score 71</div><div class="feed-time">3h ago</div></div>
+            <div class="feed-item"><div class="feed-dot red"></div><div class="feed-text"><strong>Roberto Silva</strong> not qualified — no budget</div><div class="feed-time">5h ago</div></div>
+          </div>
+        </div>
+
+        <!-- Pipeline -->
+        <div class="table-wrap">
+          <div class="table-header"><h3>Pipeline This Week</h3></div>
+          <div style="padding:20px">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="font-weight:600">New Leads</span><span style="color:var(--text3)">5</span></div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:100%;height:100%;background:var(--accent);border-radius:4px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="font-weight:600">Qualified</span><span style="color:var(--text3)">3</span></div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:60%;height:100%;background:var(--green);border-radius:4px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="font-weight:600">Calls Booked</span><span style="color:var(--text3)">3</span></div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:60%;height:100%;background:#8b5cf6;border-radius:4px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="font-weight:600">Closed Won</span><span style="color:var(--text3)">1</span></div>
+                <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:20%;height:100%;background:var(--orange);border-radius:4px"></div></div>
+              </div>
+            </div>
+
+            <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px">Upcoming Calls</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;background:var(--surface2);border-radius:8px">
+                  <span style="color:var(--accent);font-weight:600;font-size:12px;min-width:44px">Thu 2pm</span>
+                  <span>Carla Mendes — Coach de carreira</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;background:var(--surface2);border-radius:8px">
+                  <span style="color:var(--accent);font-weight:600;font-size:12px;min-width:44px">Fri 10a</span>
+                  <span>Marcos Vieira — Metalúrgica MV</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;background:var(--surface2);border-radius:8px">
+                  <span style="color:var(--accent);font-weight:600;font-size:12px;min-width:44px">Fri 3pm</span>
+                  <span>Juliana Costa — Studio Pilates</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LEADS ===== -->
+    <div class="page" id="page-leads">
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>All Leads<span class="count">23 total</span></h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn-sm">Export CSV</button>
+            <button class="btn-sm btn-accent">+ Add Lead</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Company</th><th>Industry</th><th>Status</th><th>Score</th><th>Source</th><th>Last Contact</th></tr>
+          </thead>
+          <tbody>
+            <tr><td style="font-weight:600">Carla Mendes</td><td>CM Coaching</td><td>Executive Coaching</td><td><span class="badge badge-booked">Booked</span></td><td><span class="score score-high">88</span></td><td>Chat</td><td>12 min ago</td></tr>
+            <tr><td style="font-weight:600">Pedro Almeida</td><td>Almeida Engenharia</td><td>Civil Engineering</td><td><span class="badge badge-qualified">Qualified</span></td><td><span class="score score-high">82</span></td><td>Chat</td><td>34 min ago</td></tr>
+            <tr><td style="font-weight:600">Ana Ferreira</td><td>AF Consultoria</td><td>Management Consulting</td><td><span class="badge badge-nurture">Nurture</span></td><td><span class="score score-mid">64</span></td><td>Chat</td><td>1h ago</td></tr>
+            <tr><td style="font-weight:600">Marcos Vieira</td><td>Metalúrgica MV</td><td>Manufacturing</td><td><span class="badge badge-booked">Booked</span></td><td><span class="score score-high">79</span></td><td>Chat</td><td>2h ago</td></tr>
+            <tr><td style="font-weight:600">Juliana Costa</td><td>Studio Corpo & Mente</td><td>Wellness / Pilates</td><td><span class="badge badge-booked">Booked</span></td><td><span class="score score-mid">71</span></td><td>Chat</td><td>3h ago</td></tr>
+            <tr><td style="font-weight:600">Roberto Silva</td><td>Silva & Filhos</td><td>Retail</td><td><span class="badge badge-lost">Not Qualified</span></td><td><span class="score score-low">28</span></td><td>Chat</td><td>5h ago</td></tr>
+            <tr><td style="font-weight:600">Fernanda Lima</td><td>FL Nutrition</td><td>Health Coaching</td><td><span class="badge badge-booked">Booked</span></td><td><span class="score score-high">85</span></td><td>Chat</td><td>Yesterday</td></tr>
+            <tr><td style="font-weight:600">Ricardo Santos</td><td>TechParts Ltda</td><td>Industrial Parts</td><td><span class="badge badge-qualified">Qualified</span></td><td><span class="score score-high">77</span></td><td>Chat</td><td>Yesterday</td></tr>
+            <tr><td style="font-weight:600">Luciana Oliveira</td><td>LO Psicologia</td><td>Psychology Practice</td><td><span class="badge badge-booked">Booked</span></td><td><span class="score score-high">83</span></td><td>Chat</td><td>2 days ago</td></tr>
+            <tr><td style="font-weight:600">Bruno Machado</td><td>Machado Advogados</td><td>Law Firm</td><td><span class="badge badge-nurture">Nurture</span></td><td><span class="score score-mid">59</span></td><td>Chat</td><td>2 days ago</td></tr>
+            <tr><td style="font-weight:600">Tatiana Rocha</td><td>Instituto Bem-Estar</td><td>Holistic Health</td><td><span class="badge badge-booked">Booked</span></td><td><span class="score score-high">90</span></td><td>Chat</td><td>3 days ago</td></tr>
+            <tr><td style="font-weight:600">Diego Prado</td><td>Prado Contabilidade</td><td>Accounting</td><td><span class="badge badge-qualified">Qualified</span></td><td><span class="score score-mid">68</span></td><td>Chat</td><td>3 days ago</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== CONVERSATIONS ===== -->
+    <div class="page" id="page-conversations">
+      <div class="conv-layout">
+        <div class="conv-list">
+          <div class="conv-list-header">Conversations</div>
+          <div class="conv-item active" data-conv="1">
+            <div class="conv-item-name">Carla Mendes</div>
+            <div class="conv-item-preview">Great! I'll pull up our calendar...</div>
+            <div class="conv-item-meta"><span class="badge badge-booked" style="font-size:10px">Booked</span><span class="conv-item-time">12 min</span></div>
+          </div>
+          <div class="conv-item" data-conv="2">
+            <div class="conv-item-name">Pedro Almeida</div>
+            <div class="conv-item-preview">We need to hire 3 engineers by Q2...</div>
+            <div class="conv-item-meta"><span class="badge badge-qualified" style="font-size:10px">Qualified</span><span class="conv-item-time">34 min</span></div>
+          </div>
+          <div class="conv-item" data-conv="3">
+            <div class="conv-item-name">Ana Ferreira</div>
+            <div class="conv-item-preview">How much does this cost?</div>
+            <div class="conv-item-meta"><span class="badge badge-nurture" style="font-size:10px">Nurture</span><span class="conv-item-time">1h</span></div>
+          </div>
+          <div class="conv-item" data-conv="4">
+            <div class="conv-item-name">Marcos Vieira</div>
+            <div class="conv-item-preview">Yeah let's do a call, Thursday works</div>
+            <div class="conv-item-meta"><span class="badge badge-booked" style="font-size:10px">Booked</span><span class="conv-item-time">2h</span></div>
+          </div>
+          <div class="conv-item" data-conv="5">
+            <div class="conv-item-name">Roberto Silva</div>
+            <div class="conv-item-preview">We don't really have budget for that</div>
+            <div class="conv-item-meta"><span class="badge badge-lost" style="font-size:10px">Lost</span><span class="conv-item-time">5h</span></div>
+          </div>
+        </div>
+        <div class="conv-detail">
+          <div class="conv-detail-header">
+            <h3>Carla Mendes <span style="font-weight:400;color:var(--text3);font-size:12px;margin-left:8px">CM Coaching · Executive Coaching</span></h3>
+            <span class="badge badge-booked">Booked — Thu 2pm</span>
+          </div>
+          <div class="conv-messages" id="conv-messages">
+            <div class="conv-msg bot">Hey! Welcome to our site. I help businesses find the right solutions for growth. What's on your mind today?</div>
+            <div class="conv-msg user">Hi! I'm a career coach and I've been growing fast — I need help with client acquisition. Right now I just post on LinkedIn and hope for the best.</div>
+            <div class="conv-msg bot">That's a great problem to have! Growing fast means you're doing something right. LinkedIn is solid, but relying on organic alone is like fishing with one rod when you could have ten. Quick question — what kind of clients do you work with? Executives, mid-career professionals?</div>
+            <div class="conv-msg user">Mostly mid-to-senior managers looking to transition. My sweet spot is people in the 35-50 range who feel stuck. I charge R$3,500 per coaching package.</div>
+            <div class="conv-msg bot">Perfect profile. At R$3,500 per client, you only need a few extra per month to see serious ROI. Here's what I'd suggest: we set up an AI-powered sales flow on your website that talks to visitors 24/7, qualifies them based on your ideal client profile, and books discovery calls directly on your calendar. No more hoping people DM you — the system brings them to you.</div>
+            <div class="conv-msg user">That sounds interesting but I'm not very technical. Is it complicated to set up?</div>
+            <div class="conv-msg bot">Not at all — we handle everything. You give us your website, your ideal client description, and your calendar link. We configure the AI, test it, and deploy it. You literally just start seeing booked calls appear. Most clients are live within 48 hours. Want to jump on a quick 30-min call so I can show you exactly how it works for coaching businesses?</div>
+            <div class="conv-msg user">Sure, that sounds good. When?</div>
+            <div class="conv-msg bot">Let me pull up the calendar for you — pick any time that works!</div>
+            <div class="conv-msg system">✅ Carla booked: Thursday 2pm — Discovery Call</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TEST AGENT ===== -->
+    <div class="page" id="page-test-agent">
+      <div class="test-layout">
+        <div class="test-info">
+          <h3>Test Your AI Agent</h3>
+          <p>Chat with your agent to see how it handles real conversations. The agent uses your configured company info, services, and qualification criteria.</p>
+
+          <div class="info-block">
+            <h4>Agent is configured for</h4>
+            <ul>
+              <li>Company: GrowthFlow Agency</li>
+              <li>Service: AI Sales Automation</li>
+              <li>Target: Coaches, consultants, SMBs</li>
+              <li>Language: Portuguese (BR)</li>
+            </ul>
+          </div>
+
+          <div class="info-block">
+            <h4>Conversation flow</h4>
+            <ul>
+              <li>Greeting — warm, open-ended</li>
+              <li>Discovery — understand needs (2-4 messages)</li>
+              <li>Pitch — recommend relevant service</li>
+              <li>Objection handling — price, timing, trust</li>
+              <li>Close — book a discovery call</li>
+            </ul>
+          </div>
+
+          <div class="info-block">
+            <h4>Automations on lead capture</h4>
+            <ul>
+              <li>Lead data → Google Sheets (instant)</li>
+              <li>Notification → Telegram (instant)</li>
+              <li>Follow-up email → 5 min after chat</li>
+              <li>CRM status update on booking</li>
+            </ul>
+          </div>
+
+          <div style="margin-top:20px">
+            <p style="font-size:12px;color:var(--text3)">Try saying things like: "I'm a fitness coach looking for more clients" or "I run a small manufacturing company and need help with sales"</p>
+          </div>
+        </div>
+
+        <div class="test-chat">
+          <div class="test-chat-header">
+            <div class="avatar">🤖</div>
+            <div>
+              <h4>AI Sales Agent</h4>
+              <p>Powered by Claude</p>
+            </div>
+          </div>
+          <div class="test-messages" id="test-messages">
+            <div class="test-msg bot">Hey! 👋 Welcome. I help businesses grow faster with smart automation. What do you do, and what's your biggest challenge right now?</div>
+          </div>
+          <div class="test-input-area">
+            <input type="text" class="test-input" id="test-input" placeholder="Type a message to test the agent...">
+            <button class="test-send" id="test-send">
+              <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== GOALS & ROADMAP ===== -->
+    <div class="page" id="page-goals">
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+        <div class="table-wrap">
+          <div class="table-header"><h3>Your Roadmap</h3><span class="badge badge-qualified" style="font-size:11px">Phase 2 of 5</span></div>
+          <div style="padding:24px">
+            <div class="milestone-track">
+              <div class="milestone done">
+                <div class="milestone-dot">✓</div>
+                <h4>Agent Setup Complete</h4>
+                <p>AI sales agent configured with your company info, services, and tone. Widget embedded on your website.</p>
+                <span class="ml-tag">Completed Feb 10</span>
+              </div>
+              <div class="milestone active">
+                <div class="milestone-dot">2</div>
+                <h4>First 10 Qualified Leads</h4>
+                <p>Your agent is having conversations and qualifying visitors. Track progress on the Dashboard. Currently at 14 qualified leads.</p>
+                <span class="ml-tag">In Progress — 14/10 leads</span>
+              </div>
+              <div class="milestone upcoming">
+                <div class="milestone-dot">3</div>
+                <h4>Book 5+ Discovery Calls</h4>
+                <p>Qualified leads book calls directly through the chat. Goal: 5 calls per week. Currently at 8 total.</p>
+                <span class="ml-tag">Target: 5/week</span>
+              </div>
+              <div class="milestone upcoming">
+                <div class="milestone-dot">4</div>
+                <h4>Close First Client from Agent</h4>
+                <p>Convert a booked call into a paying client. The agent paid for itself.</p>
+                <span class="ml-tag">Next milestone</span>
+              </div>
+              <div class="milestone upcoming">
+                <div class="milestone-dot">5</div>
+                <h4>Scale to 50+ Leads/Week</h4>
+                <p>Increase website traffic, optimize agent responses, add follow-up sequences. Predictable pipeline.</p>
+                <span class="ml-tag">Growth phase</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="card-label">Current Goal</div>
+            <div style="font-size:16px;font-weight:600;margin-top:4px;line-height:1.4">Book 5+ calls per week from the AI agent</div>
+            <div style="margin-top:12px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="font-weight:600">This week</span><span style="color:var(--accent);font-weight:600">3/5 calls</span></div>
+              <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden"><div style="width:60%;height:100%;background:var(--accent);border-radius:4px"></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-label">Agent ROI</div>
+            <div class="card-value" style="color:var(--green)">+R$7,000</div>
+            <div class="card-sub">From 2 closed clients this month</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--text2)">Agent cost: R$247/mo → <strong style="color:var(--green)">28x return</strong></div>
+          </div>
+          <div class="card">
+            <div class="card-label">Key Insight</div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-top:4px">Coaching clients convert best (43% booking rate). Consider targeting more wellness and coaching businesses in your outreach.</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Next Action</div>
+            <div style="font-size:13px;margin-top:4px;line-height:1.5"><strong>Prepare for Carla Mendes call</strong> — Thu 2pm. She's a career coach, R$3,500/package, wants client acquisition help.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TASKS ===== -->
+    <div class="page" id="page-tasks">
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:20px">
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Your Tasks<span class="count">5 open</span></h3>
+            <button class="btn-sm btn-accent">+ Add Task</button>
+          </div>
+          <div style="padding:8px 12px">
+            <div class="task-list" id="task-list">
+              <div class="task-item">
+                <div class="task-check" onclick="this.classList.toggle('checked')">✓</div>
+                <div class="task-body">
+                  <div class="task-title">Prepare for Carla Mendes discovery call</div>
+                  <div class="task-meta"><span>Thu 2pm</span><span>CM Coaching · Executive Coaching</span></div>
+                </div>
+                <span class="task-priority high">Urgent</span>
+              </div>
+              <div class="task-item">
+                <div class="task-check" onclick="this.classList.toggle('checked')">✓</div>
+                <div class="task-body">
+                  <div class="task-title">Follow up with Ana Ferreira about pricing</div>
+                  <div class="task-meta"><span>Nurture lead</span><span>AF Consultoria · Score 64</span></div>
+                </div>
+                <span class="task-priority high">Urgent</span>
+              </div>
+              <div class="task-item">
+                <div class="task-check" onclick="this.classList.toggle('checked')">✓</div>
+                <div class="task-body">
+                  <div class="task-title">Prepare for Marcos Vieira call</div>
+                  <div class="task-meta"><span>Fri 10am</span><span>Metalúrgica MV · Manufacturing</span></div>
+                </div>
+                <span class="task-priority med">This week</span>
+              </div>
+              <div class="task-item">
+                <div class="task-check" onclick="this.classList.toggle('checked')">✓</div>
+                <div class="task-body">
+                  <div class="task-title">Review Pedro Almeida conversation — send proposal</div>
+                  <div class="task-meta"><span>Qualified lead</span><span>Almeida Engenharia · Score 82</span></div>
+                </div>
+                <span class="task-priority med">This week</span>
+              </div>
+              <div class="task-item">
+                <div class="task-check" onclick="this.classList.toggle('checked')">✓</div>
+                <div class="task-body">
+                  <div class="task-title">Connect Telegram notifications to agent</div>
+                  <div class="task-meta"><span>Setup task</span><span>Settings → Integrations</span></div>
+                </div>
+                <span class="task-priority low">Later</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="card-label">This Week</div>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Tasks done</span><span style="color:var(--green);font-weight:600">3/8</span></div>
+                <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:37.5%;height:100%;background:var(--green);border-radius:3px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Calls booked</span><span style="color:var(--accent);font-weight:600">3/5</span></div>
+                <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:60%;height:100%;background:var(--accent);border-radius:3px"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Follow-ups sent</span><span style="color:var(--orange);font-weight:600">1/3</span></div>
+                <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:33%;height:100%;background:var(--orange);border-radius:3px"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-label">Auto-generated from</div>
+            <div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-top:6px">
+              Tasks are created automatically from your pipeline activity: new bookings become call prep tasks, nurture leads become follow-up tasks, qualified leads become proposal tasks.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SETTINGS ===== -->
+    <div class="page" id="page-settings">
+      <div class="settings-grid">
+        <div class="settings-card">
+          <h3>🏢 Company Info</h3>
+          <div class="form-group"><label>Company Name</label><input type="text" value="GrowthFlow Agency"></div>
+          <div class="form-group"><label>Tagline</label><input type="text" value="AI-powered sales automation for growing businesses"></div>
+          <div class="form-group"><label>Language</label>
+            <select><option>Portuguese (BR)</option><option>English</option><option>Spanish</option></select>
+          </div>
+          <div class="form-group"><label>Services (one per line)</label><textarea>AI Sales Chatbot — R$497/mês
+Lead Qualification System — R$297/mês
+Full Sales Automation — R$997/mês</textarea></div>
+          <button class="btn-sm btn-accent">Save Changes</button>
+        </div>
+
+        <div class="settings-card">
+          <h3>📅 Booking</h3>
+          <div class="form-group"><label>Cal.com Link</label><input type="text" value="https://cal.com/growthflow/discovery"></div>
+          <div class="form-group"><label>Call Duration</label>
+            <select><option>30 minutes</option><option>15 minutes</option><option>45 minutes</option></select>
+          </div>
+          <div class="form-group"><label>Call Title</label><input type="text" value="Discovery Call — GrowthFlow"></div>
+          <button class="btn-sm btn-accent">Save Changes</button>
+        </div>
+
+        <div class="settings-card">
+          <h3>🔗 Integrations</h3>
+          <div class="form-group"><label>Google Sheet ID</label><input type="text" value="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" placeholder="Sheet ID for leads"></div>
+          <div class="form-group"><label>N8N Webhook URL</label><input type="text" value="https://n8n.growthflow.com/webhook/lead-captured"></div>
+          <div class="form-group"><label>Telegram Bot Token</label><input type="text" value="••••••••••••••••••" placeholder="For notifications"></div>
+          <div class="form-group"><label>Telegram Chat ID</label><input type="text" value="••••••••" placeholder="Your chat ID"></div>
+          <button class="btn-sm btn-accent">Save Changes</button>
+        </div>
+
+        <div class="settings-card">
+          <h3>🎨 Widget Appearance</h3>
+          <div class="form-group"><label>Primary Color</label><input type="color" value="#4f46e5" style="height:36px;padding:2px"></div>
+          <div class="form-group"><label>Widget Position</label>
+            <select><option>Bottom Right</option><option>Bottom Left</option></select>
+          </div>
+          <div class="form-group"><label>Greeting Message</label><textarea>Hey! 👋 Welcome. I help businesses grow faster with smart automation. What do you do, and what's your biggest challenge right now?</textarea></div>
+          <div class="form-group"><label>Embed Code</label>
+            <div style="background:var(--surface2);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:var(--text2);line-height:1.6;word-break:break-all">
+              &lt;script&gt; window.SA_CONFIG={apiUrl:'https://app.growthflow.com'}; &lt;/script&gt;&lt;script src="https://app.growthflow.com/widget/embed.js" defer&gt;&lt;/script&gt;
+            </div>
+          </div>
+          <button class="btn-sm" style="margin-top:4px">Copy Embed Code</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FLOATING HELP BOT -->
+<div id="helpbot">
+  <div id="helpbot-win">
+    <div id="helpbot-header">
+      <div style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:16px">🧑‍💼</div>
+      <div><h4>Your Guide</h4><p>I'm here to help you succeed</p></div>
+    </div>
+    <div id="helpbot-msgs"></div>
+    <div id="helpbot-input-area">
+      <input type="text" id="helpbot-input" placeholder="Ask me anything...">
+      <button id="helpbot-send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+    </div>
+  </div>
+  <div id="helpbot-teaser">Need help? I'm here for you 👋</div>
+  <button id="helpbot-trigger"><span class="hb-icon-chat" style="font-size:26px;line-height:1">👋</span><span class="hb-icon-close" style="color:#fff;font-size:20px">✕</span></button>
+</div>
+
+<script>
+(function(){
+  // ===== NAV =====
+  var navItems = document.querySelectorAll('.nav-item[data-page]');
+  var pages = document.querySelectorAll('.page');
+  var pageTitle = document.getElementById('page-title');
+  var titles = {dashboard:'Dashboard',leads:'Leads',conversations:'Conversations',goals:'Goals & Roadmap',tasks:'Tasks','test-agent':'Test Agent',settings:'Settings'};
+
+  navItems.forEach(function(item){
+    item.addEventListener('click',function(){
+      var page = this.dataset.page;
+      navItems.forEach(function(n){n.classList.remove('active')});
+      this.classList.add('active');
+      pages.forEach(function(p){p.classList.remove('active')});
+      document.getElementById('page-'+page).classList.add('active');
+      pageTitle.textContent = titles[page]||page;
+    });
+  });
+
+  // ===== CONVERSATION SWITCHER =====
+  var convItems = document.querySelectorAll('.conv-item[data-conv]');
+  var CONVERSATIONS = {
+    '1': {
+      name:'Carla Mendes', company:'CM Coaching', industry:'Executive Coaching', status:'Booked — Thu 2pm', statusClass:'badge-booked',
+      messages:[
+        {type:'bot',text:"Hey! Welcome to our site. I help businesses find the right solutions for growth. What's on your mind today?"},
+        {type:'user',text:"Hi! I'm a career coach and I've been growing fast \u2014 I need help with client acquisition. Right now I just post on LinkedIn and hope for the best."},
+        {type:'bot',text:"That's a great problem to have! Growing fast means you're doing something right. LinkedIn is solid, but relying on organic alone is like fishing with one rod when you could have ten. Quick question \u2014 what kind of clients do you work with?"},
+        {type:'user',text:"Mostly mid-to-senior managers looking to transition. I charge R$3,500 per coaching package."},
+        {type:'bot',text:"Perfect profile. At R$3,500 per client, you only need a few extra per month to see serious ROI. Here's what I'd suggest: we set up an AI-powered sales flow on your website that qualifies visitors and books discovery calls directly on your calendar. No more hoping people DM you."},
+        {type:'user',text:"That sounds interesting but I'm not very technical. Is it complicated?"},
+        {type:'bot',text:"Not at all \u2014 we handle everything. You give us your website, your ideal client description, and your calendar link. Most clients are live within 48 hours. Want to do a quick 30-min call?"},
+        {type:'user',text:"Sure, when?"},
+        {type:'bot',text:"Let me pull up the calendar for you \u2014 pick any time that works!"},
+        {type:'system',text:"\u2705 Carla booked: Thursday 2pm \u2014 Discovery Call"}
+      ]
+    },
+    '2': {
+      name:'Pedro Almeida', company:'Almeida Engenharia', industry:'Civil Engineering', status:'Qualified', statusClass:'badge-qualified',
+      messages:[
+        {type:'bot',text:"Hey there! Welcome. What brings you here today?"},
+        {type:'user',text:"We need to hire 3 engineers by Q2 and our HR team is overwhelmed. We've posted on Indeed for weeks with no luck."},
+        {type:'bot',text:"Hiring engineers is tough right now \u2014 the good ones aren't on job boards. How big is your company, and what seniority level are you looking for?"},
+        {type:'user',text:"About 120 employees. We need 2 senior structural engineers and 1 project manager. Based in Curitiba."},
+        {type:'bot',text:"Got it \u2014 senior technical hires in Curitiba. That's a niche search. We specialize in this: direct headhunting with AI-powered candidate scoring. Average time to first qualified shortlist is 5 days. Who's the decision maker for hiring?"},
+        {type:'user',text:"That would be me and our CTO. What's the process like?"}
+      ]
+    },
+    '3': {
+      name:'Ana Ferreira', company:'AF Consultoria', industry:'Management Consulting', status:'Nurture', statusClass:'badge-nurture',
+      messages:[
+        {type:'bot',text:"Hi! Welcome. How can I help you today?"},
+        {type:'user',text:"I'm interested in what you offer but I need to understand the pricing first."},
+        {type:'bot',text:"Of course! First, help me understand your situation so I can point you to the right option. What kind of business do you run?"},
+        {type:'user',text:"Management consulting, about 8 people. We're looking to get more inbound leads from our website."},
+        {type:'bot',text:"Great fit. For a consulting firm your size, our standard plan at R$497/month would cover the AI chat agent, lead qualification, and Cal.com booking integration. Most consultants see 3-5x more booked calls in the first month."},
+        {type:'user',text:"R$497 is a bit more than I expected. Let me think about it."}
+      ]
+    },
+    '4': {
+      name:'Marcos Vieira', company:'Metal\u00fargica MV', industry:'Manufacturing', status:'Booked — Fri 10am', statusClass:'badge-booked',
+      messages:[
+        {type:'bot',text:"Welcome! What can I help you with?"},
+        {type:'user',text:"We're a mid-size manufacturer and we need to modernize our sales process. Still doing everything by phone and email."},
+        {type:'bot',text:"You're not alone \u2014 a lot of manufacturers are in the same spot. The good news is small changes make a big difference. What's your main sales channel right now?"},
+        {type:'user',text:"Mostly trade shows and cold calls. Our website gets traffic but we don't capture any of it."},
+        {type:'bot',text:"That's exactly the gap we fill. An AI agent on your site captures those visitors, qualifies them, and books meetings \u2014 while your sales team focuses on closing. Want to hop on a call to see a demo?"},
+        {type:'user',text:"Yeah let's do a call, Thursday works."},
+        {type:'system',text:"\u2705 Marcos booked: Friday 10am \u2014 Discovery Call"}
+      ]
+    },
+    '5': {
+      name:'Roberto Silva', company:'Silva & Filhos', industry:'Retail', status:'Not Qualified', statusClass:'badge-lost',
+      messages:[
+        {type:'bot',text:"Hey! Welcome. What brings you here today?"},
+        {type:'user',text:"Just browsing. What do you guys do?"},
+        {type:'bot',text:"We build AI-powered sales tools that help businesses capture more leads from their website and book more calls. What kind of business are you in?"},
+        {type:'user',text:"Small retail store, 3 employees. We don't really have a website."},
+        {type:'bot',text:"Got it! Our solution works best for businesses with an existing website that gets some traffic. For your stage, I'd recommend starting with a simple landing page first. We might be a better fit down the road as you grow online. Is there anything else I can help with?"},
+        {type:'user',text:"No that's fine, thanks."}
+      ]
+    }
+  };
+
+  convItems.forEach(function(item){
+    item.addEventListener('click',function(){
+      convItems.forEach(function(c){c.classList.remove('active')});
+      this.classList.add('active');
+      renderConversation(this.dataset.conv);
+    });
+  });
+
+  function renderConversation(id){
+    var conv = CONVERSATIONS[id];
+    if(!conv) return;
+    var header = document.querySelector('.conv-detail-header');
+    header.querySelector('h3').textContent = conv.name;
+    var span = document.createElement('span');
+    span.style.cssText = 'font-weight:400;color:var(--text3);font-size:12px;margin-left:8px';
+    span.textContent = conv.company + ' \u00b7 ' + conv.industry;
+    header.querySelector('h3').appendChild(span);
+
+    var badge = header.querySelector('.badge');
+    badge.className = 'badge ' + conv.statusClass;
+    badge.textContent = conv.status;
+
+    var msgs = document.getElementById('conv-messages');
+    msgs.textContent = '';
+    conv.messages.forEach(function(m){
+      var div = document.createElement('div');
+      div.className = 'conv-msg ' + m.type;
+      div.textContent = m.text;
+      msgs.appendChild(div);
+    });
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ===== TEST AGENT CHAT =====
+  var testMessages = document.getElementById('test-messages');
+  var testInput = document.getElementById('test-input');
+  var testSend = document.getElementById('test-send');
+  var testConv = [];
+
+  var DEMO_RESPONSES = [
+    "Interesting! Tell me more about your business \u2014 what do you do and who are your ideal clients?",
+    "Got it. And what's been your biggest challenge when it comes to getting new clients?",
+    "That's super common. Most businesses lose 95% of their website visitors because there's no one there to talk to them. Our AI agent changes that \u2014 it engages every visitor, qualifies them, and books calls on your calendar. What does your current sales process look like?",
+    "Makes sense. Here's what would change: instead of hoping people fill out a contact form, the AI proactively starts conversations, understands what they need, and if they're a fit, books a call right there in the chat. Most of our clients see 3-5x more booked calls in the first month. The cost? About R$497/month \u2014 usually pays for itself with one extra client.",
+    "Great question. We handle the entire setup \u2014 you just give us your website URL, your services, and your calendar link. We configure the AI, test it, and deploy. You're live in 48 hours. Want to hop on a 30-min call so I can show you a live demo?",
+    "Perfect! Let me pull up the calendar \u2014 pick any time that works for you."
+  ];
+  var responseIndex = 0;
+
+  function addTestMsg(type, text){
+    var div = document.createElement('div');
+    div.className = 'test-msg ' + type;
+    div.textContent = text;
+    testMessages.appendChild(div);
+    testMessages.scrollTop = testMessages.scrollHeight;
+  }
+
+  function showTyping(){
+    var t = document.createElement('div');
+    t.className = 'typing-dots';
+    t.id = 'typing';
+    for(var i=0;i<3;i++) t.appendChild(document.createElement('span'));
+    testMessages.appendChild(t);
+    testMessages.scrollTop = testMessages.scrollHeight;
+  }
+
+  function hideTyping(){
+    var t = document.getElementById('typing');
+    if(t) t.remove();
+  }
+
+  function sendTestMessage(){
+    var text = testInput.value.trim();
+    if(!text) return;
+    testInput.value = '';
+    addTestMsg('user', text);
+
+    showTyping();
+    var delay = 1000 + Math.random() * 1500;
+    setTimeout(function(){
+      hideTyping();
+      var resp = DEMO_RESPONSES[responseIndex] || "That's a great point! I'd love to discuss this in more detail. Shall we book a quick call to go deeper? I can show you exactly how this would work for your business.";
+      addTestMsg('bot', resp);
+      responseIndex++;
+
+      if(responseIndex === DEMO_RESPONSES.length){
+        setTimeout(function(){
+          addTestMsg('system', '\u2705 Lead qualified \u2014 booking widget would appear here');
+        }, 800);
+      }
+    }, delay);
+  }
+
+  testSend.addEventListener('click', sendTestMessage);
+  testInput.addEventListener('keydown', function(e){
+    if(e.key==='Enter') sendTestMessage();
+  });
+
+  // ===== FLOATING HELP BOT =====
+  var hbTrigger = document.getElementById('helpbot-trigger');
+  var hbWin = document.getElementById('helpbot-win');
+  var hbMsgs = document.getElementById('helpbot-msgs');
+  var hbInput = document.getElementById('helpbot-input');
+  var hbSend = document.getElementById('helpbot-send');
+  var hbOpen = false;
+  var hbInited = false;
+  var currentPage = 'dashboard';
+
+  // Knowledge base — the bot knows the tool
+  var KB = {
+    // Page-specific context
+    pages: {
+      dashboard: "You're on the Dashboard. It shows your key metrics: total leads, qualified leads, booked calls, and cost per lead. Below that is the activity feed (real-time events) and your pipeline + upcoming calls.",
+      leads: "You're on the Leads page. This is your CRM — every person who chatted with your AI agent appears here with their company, industry, status, and qualification score. You can export to CSV or add leads manually.",
+      conversations: "You're on Conversations. Click any conversation on the left to read the full chat transcript. You can see how the AI handled each lead — from greeting to booking.",
+      'test-agent': "You're on Test Agent. Type anything in the chat to simulate a conversation with your AI sales agent. This is how your website visitors will experience it.",
+      goals: "You're on Goals & Roadmap. This shows your journey: from agent setup to scaling your pipeline. Each milestone builds on the last. The sidebar cards show your current goal progress, ROI, and key insights.",
+      tasks: "You're on Tasks. These are auto-generated from your pipeline activity: call prep for booked leads, follow-up reminders for nurture leads, and setup tasks for integrations. Check them off as you go!",
+      settings: "You're on Settings. This is where you configure everything: your company info, services, Cal.com booking link, integrations (Google Sheets, N8N, Telegram), and widget appearance."
+    },
+    // Topic-based answers
+    topics: {
+      'score|scoring|qualification|qualified': "The score (0-100) measures how likely a lead is to become a client. It's based on 4 criteria you configure: do they have a real need? Can they afford it? Are they a decision maker? Is their timeline urgent? Green (70+) = high quality. Yellow (50-69) = worth nurturing. Red (below 50) = probably not a fit.",
+      'status|badge|booked|nurture|lost': "Lead statuses track where each person is in your pipeline:\n• New — just started chatting\n• Qualified — scored well, ready for outreach\n• Booked — they scheduled a call via Cal.com\n• Nurture — interested but not ready, needs follow-up\n• Not Qualified — not a fit (no budget, wrong size, etc.)",
+      'how.*work|what.*do|explain': "The flow is simple: 1) You embed a chat widget on your website. 2) When someone visits, the AI agent greets them and starts a natural sales conversation. 3) It discovers their needs, pitches your services, handles objections. 4) If they're qualified, it offers to book a call on your calendar. 5) Lead data automatically goes to Google Sheets + you get a Telegram notification.",
+      'cal|calendar|booking|schedule': "Cal.com is the booking system. When the AI qualifies a lead, it shows a booking widget right inside the chat. The visitor picks a time, and it goes straight to your calendar. You configure your Cal.com link in Settings → Booking.",
+      'google.*sheet|crm|lead.*data|spreadsheet': "Every lead is automatically saved to a Google Sheet with: name, email, company, what they need, qualification score, conversation summary, and status. This is your CRM. Connect it in Settings → Integrations with your Sheet ID.",
+      'n8n|automat|webhook|zapier': "N8N is the automation layer. It connects everything: when a lead is captured → write to Google Sheets + send Telegram notification. When a call is booked → update sheet status + send prep email. You set it up once and it runs forever.",
+      'telegram|notif|alert': "You get instant Telegram notifications when: a new qualified lead appears, someone books a call, or a conversation needs follow-up. Configure your Telegram bot token and chat ID in Settings → Integrations.",
+      'embed|widget|install|website': "To add the chat to any website, copy the embed code from Settings → Widget Appearance. It's 2 lines of HTML — paste it before the closing </body> tag. The widget appears as a chat bubble in the bottom-right corner.",
+      'price|cost|pricing|how much|expensive': "The system costs roughly $40-55/month to run (hosting + AI API costs). You can sell it to clients at $297-497/month per client. That's 85-90% margin. One extra booked call per month pays for the service.",
+      'custom|white.*label|client|brand|rebrand': "Each client gets their own configuration: company name, services, brand colors, booking link, Google Sheet, and webhook URLs. You deploy a separate instance per client, or use multi-tenant routing. Their visitors never see your brand — it's fully white-labeled.",
+      'setup|how.*start|get.*started|deploy': "Setup takes about 48 hours: 1) Clone the repo, add your API key. 2) Create a Cal.com event type. 3) Configure your company info in config.json. 4) Deploy to Railway ($5/mo). 5) Set up N8N workflows for Sheets + Telegram. 6) Paste the embed code on your website.",
+      'objection|pushback|not interested': "The AI handles common objections: 'too expensive' → it reframes around cost-of-not-acting. 'Bad experience with recruiters/agencies' → it explains what's different. 'Need to think about it' → it offers a no-commitment call. 'Not the right time' → it books a future touchpoint. You can customize these in the agent config.",
+      'conversation.*flow|phases|stages': "Every conversation follows 5 phases: 1) Greeting — warm, open. 2) Discovery — 2-4 questions to understand needs. 3) Pitch — recommend the right service based on what they said. 4) Objection handling — address concerns. 5) Close — book a discovery call. The AI does this naturally, not robotically.",
+      'analytics|metrics|report|data': "The dashboard shows: total leads, qualification rate, calls booked, and cost per lead. The activity feed shows real-time events. Pipeline bars show conversion at each stage. In production, all this updates automatically from your lead data.",
+      'goal|roadmap|milestone|vision|phase': "The Goals page shows your growth journey in 5 phases: 1) Agent Setup, 2) First 10 Qualified Leads, 3) Book 5+ Calls/Week, 4) Close First Client from Agent, 5) Scale to 50+ Leads/Week. Each milestone is tracked so you always know where you are and what to do next.",
+      'task|todo|action|checklist|to do': "Tasks are auto-generated from your pipeline. When someone books a call → you get a 'prep for call' task. When a lead needs follow-up → you get a 'follow up' task. You can also add tasks manually. Check them off as you complete them."
+    }
+  };
+
+  function hbFindAnswer(q) {
+    var lower = q.toLowerCase();
+    // Check topic matches
+    var keys = Object.keys(KB.topics);
+    for (var i = 0; i < keys.length; i++) {
+      if (new RegExp(keys[i], 'i').test(lower)) {
+        return KB.topics[keys[i]];
+      }
+    }
+    // Page-specific help
+    if (/where am i|this page|what.*page|what.*see/.test(lower)) {
+      return KB.pages[currentPage] || "You're exploring the SalesAgent command center.";
+    }
+    if (/help|what can|guide/.test(lower)) {
+      return "I can explain any part of this tool! Try asking: \"How does the scoring work?\", \"How do I embed the widget?\", \"What does N8N do?\", or \"How much does it cost?\"";
+    }
+    // Fallback
+    return "Good question! This tool is an AI sales agent that lives on your website, qualifies visitors, and books calls automatically. Try asking about: scores, statuses, setup, pricing, automation, or click any page in the sidebar and ask 'what's this page?'";
+  }
+
+  function hbAddMsg(type, text) {
+    var div = document.createElement('div');
+    div.className = 'hb-msg ' + type;
+    div.textContent = text;
+    hbMsgs.appendChild(div);
+    hbMsgs.scrollTop = hbMsgs.scrollHeight;
+  }
+
+  function hbAddChips(chips) {
+    var wrap = document.createElement('div');
+    wrap.className = 'hb-chips';
+    chips.forEach(function(label) {
+      var chip = document.createElement('button');
+      chip.className = 'hb-chip';
+      chip.textContent = label;
+      chip.addEventListener('click', function() {
+        wrap.remove();
+        hbSendMsg(label);
+      });
+      wrap.appendChild(chip);
+    });
+    hbMsgs.appendChild(wrap);
+    hbMsgs.scrollTop = hbMsgs.scrollHeight;
+  }
+
+  function hbShowTyping() {
+    var t = document.createElement('div');
+    t.className = 'hb-typing';
+    t.id = 'hb-typing';
+    for (var i = 0; i < 3; i++) t.appendChild(document.createElement('span'));
+    hbMsgs.appendChild(t);
+    hbMsgs.scrollTop = hbMsgs.scrollHeight;
+  }
+
+  function hbHideTyping() {
+    var t = document.getElementById('hb-typing');
+    if (t) t.remove();
+  }
+
+  function hbSendMsg(text) {
+    hbAddMsg('user', text);
+    hbShowTyping();
+    setTimeout(function() {
+      hbHideTyping();
+      hbAddMsg('bot', hbFindAnswer(text));
+    }, 600 + Math.random() * 500);
+  }
+
+  function hbInit() {
+    if (hbInited) return;
+    hbInited = true;
+    hbAddMsg('bot', "Hey! I'm here to help you get the most out of your AI agent. Ask me anything, or pick a topic below:");
+    hbAddChips(["How does it work?", "What do the scores mean?", "What are my goals?", "Show me my tasks"]);
+  }
+
+  // Track current page
+  navItems.forEach(function(item) {
+    item.addEventListener('click', function() {
+      currentPage = this.dataset.page;
+    });
+  });
+
+  var hbTeaser = document.getElementById('helpbot-teaser');
+  // Show teaser bubble after 3 seconds
+  setTimeout(function() {
+    if (!hbOpen) hbTeaser.classList.add('visible');
+  }, 3000);
+  // Hide teaser after 8 seconds
+  setTimeout(function() {
+    hbTeaser.classList.remove('visible');
+  }, 8000);
+
+  hbTrigger.addEventListener('click', function() {
+    hbOpen = !hbOpen;
+    hbTeaser.classList.remove('visible');
+    hbWin.classList.toggle('visible', hbOpen);
+    hbTrigger.classList.toggle('open', hbOpen);
+    if (hbOpen) {
+      hbInit();
+      setTimeout(function() { hbInput.focus(); }, 100);
+    }
+  });
+
+  hbSend.addEventListener('click', function() {
+    var text = hbInput.value.trim();
+    if (text) { hbInput.value = ''; hbSendMsg(text); }
+  });
+  hbInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var text = hbInput.value.trim();
+      if (text) { hbInput.value = ''; hbSendMsg(text); }
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

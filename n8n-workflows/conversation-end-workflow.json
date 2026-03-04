@@ -1,0 +1,327 @@
+{
+  "_setup_notes": {
+    "credentials_required": [
+      "Google Sheets OAuth2 — connect via n8n Credentials > Google Sheets OAuth2 API. Name it 'Google Sheets OAuth2'. Sheet must have a 'Qualified Leads' tab (for qualified leads) and a 'Leads' tab (for not-qualified and follow-up updates). Both tabs need: Name, Email, Company, Score, Notes, Outcome, Duration, Conversation ID columns.",
+      "Telegram API — already configured as 'Semeadora Bot'. chatId: 757037706."
+    ],
+    "after_import": [
+      "1. Replace SHEET_ID_PLACEHOLDER in all Google Sheets nodes with your actual Sheet ID.",
+      "2. Activate the workflow.",
+      "3. Copy the webhook URL and paste into backend/config.json under webhooks.onConversationEnd.",
+      "4. Score threshold for QUALIFIED is >= 60 AND qualified=true. FOLLOW_UP is qualified=false but score >= 40. NOT_QUALIFIED is everything else. Adjust in the Code node if needed."
+    ]
+  },
+  "name": "AI Sales Agent - Conversation End",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "conversation-ended",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-conv-end-001",
+      "name": "Webhook - Conversation Ended",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first().json;\n\nconst qualified = item.leadData?.qualified === true || item.leadData?.qualified === 'true';\nconst score = parseInt(item.leadData?.score ?? 0, 10);\n\nlet outcome;\nif (qualified && score >= 60) {\n  outcome = 'QUALIFIED';\n} else if (!qualified && score >= 40) {\n  outcome = 'FOLLOW_UP';\n} else {\n  outcome = 'NOT_QUALIFIED';\n}\n\nreturn [{\n  json: {\n    conversationId: item.conversationId,\n    duration: item.duration,\n    outcome,\n    score,\n    qualified,\n    name: item.leadData?.name ?? '',\n    email: item.leadData?.email ?? '',\n    company: item.leadData?.company ?? '',\n    notes: item.leadData?.notes ?? '',\n    rawOutcome: item.outcome ?? ''\n  }\n}];"
+      },
+      "id": "code-classify-001",
+      "name": "Code - Classify Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-qualified",
+              "leftValue": "={{ $json.outcome }}",
+              "rightValue": "QUALIFIED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-qualified-001",
+      "name": "IF - Qualified?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-followup",
+              "leftValue": "={{ $json.outcome }}",
+              "rightValue": "FOLLOW_UP",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-followup-001",
+      "name": "IF - Follow-up?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1000, 550]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Qualified Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Company": "={{ $json.company }}",
+            "Score": "={{ $json.score }}",
+            "Notes": "={{ $json.notes }}",
+            "Outcome": "QUALIFIED",
+            "Duration": "={{ $json.duration }}",
+            "Conversation ID": "={{ $json.conversationId }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "gs-qualified-001",
+      "name": "Google Sheets - Add Qualified Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1000, 280],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "757037706",
+        "text": "=🎯 Lead Qualificado!\n\n👤 {{ $json.name }} ({{ $json.company }})\n📧 {{ $json.email }}\n⭐ Score: {{ $json.score }}\n⏱ Duração: {{ $json.duration }}s\n\n📝 {{ $json.notes }}\n\n→ Agendar: https://cal.com/rafa-vaz/secret",
+        "additionalFields": {}
+      },
+      "id": "tg-qualified-001",
+      "name": "Telegram - Qualified Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 280],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Semeadora Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Follow-up",
+            "Score": "={{ $json.score }}",
+            "Notes": "={{ $json.notes }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gs-followup-001",
+      "name": "Google Sheets - Set Follow-up",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1250, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "757037706",
+        "text": "=🔄 Follow-up necessário!\n\n👤 {{ $json.name }} ({{ $json.company }})\n📧 {{ $json.email }}\n⭐ Score: {{ $json.score }}\n⏱ Duração: {{ $json.duration }}s\n\n📝 {{ $json.notes }}",
+        "additionalFields": {}
+      },
+      "id": "tg-followup-001",
+      "name": "Telegram - Follow-up Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1500, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Semeadora Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Not Qualified",
+            "Score": "={{ $json.score }}",
+            "Notes": "={{ $json.notes }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gs-notqualified-001",
+      "name": "Google Sheets - Set Not Qualified",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1250, 720],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "757037706",
+        "text": "=❌ Não qualificado\n\n👤 {{ $json.name }} ({{ $json.company }})\n📧 {{ $json.email }}\n⭐ Score: {{ $json.score }}\n⏱ Duração: {{ $json.duration }}s\n\n📝 {{ $json.notes }}",
+        "additionalFields": {}
+      },
+      "id": "tg-notqualified-001",
+      "name": "Telegram - Not Qualified Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1500, 720],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Semeadora Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Conversation Ended": {
+      "main": [
+        [
+          {"node": "Code - Classify Outcome", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Code - Classify Outcome": {
+      "main": [
+        [
+          {"node": "IF - Qualified?", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "IF - Qualified?": {
+      "main": [
+        [
+          {"node": "Google Sheets - Add Qualified Lead", "type": "main", "index": 0},
+          {"node": "Telegram - Qualified Alert", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "IF - Follow-up?", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "IF - Follow-up?": {
+      "main": [
+        [
+          {"node": "Google Sheets - Set Follow-up", "type": "main", "index": 0},
+          {"node": "Telegram - Follow-up Alert", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "Google Sheets - Set Not Qualified", "type": "main", "index": 0},
+          {"node": "Telegram - Not Qualified Alert", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "ai-sales-conv-end-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["ai-sales-agent"]
+}

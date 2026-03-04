@@ -1,0 +1,68 @@
+{
+  "company": {
+    "name": "__COMPANY_NAME__",
+    "tagline": "__TAGLINE__",
+    "services": [
+      {
+        "name": "Artist Booking & Management",
+        "description": "Full booking coordination for live performances, events, and tours",
+        "priceRange": "Contact for pricing",
+        "idealFor": "Event organizers, venues, and festival coordinators"
+      },
+      {
+        "name": "Promotional Packages",
+        "description": "Press kits, social media campaigns, and media outreach",
+        "priceRange": "Starting at $500",
+        "idealFor": "Artists launching new releases or building audience"
+      },
+      {
+        "name": "Tour Support",
+        "description": "Logistics, scheduling, and coordination for regional or national tours",
+        "priceRange": "Starting at $2,000/tour",
+        "idealFor": "Artists with 5+ confirmed dates"
+      }
+    ],
+    "differentiators": [
+      "Direct access to a curated roster of __GENRE__ artists",
+      "Average booking confirmation in 48 hours",
+      "Full event coordination from contract to soundcheck",
+      "Flexible pricing for independent venues and organizers"
+    ],
+    "targetMarket": "__TARGET_MARKET__",
+    "language": "en"
+  },
+  "widget": {
+    "primaryColor": "__PRIMARY_COLOR__",
+    "accentColor": "__ACCENT_COLOR__",
+    "position": "bottom-right",
+    "greeting": "Hey! Looking to book an artist or learn about our roster? I can help you find the perfect fit for your event.",
+    "avatarUrl": "",
+    "triggerDelay": 3000,
+    "showOnMobile": true
+  },
+  "booking": {
+    "provider": "calcom",
+    "link": "__BOOKING_LINK__",
+    "duration": 30,
+    "title": "Discovery Call"
+  },
+  "qualification": {
+    "minScore": 60,
+    "criteria": {
+      "eventType": { "weight": 25, "question": "What type of event is this? (festival, private, corporate, venue)" },
+      "budget": { "weight": 30, "question": "Do they have a realistic budget for the artist they want?" },
+      "timeline": { "weight": 25, "question": "Is the event date within the next 6 months?" },
+      "decisionMaker": { "weight": 20, "question": "Are they the decision maker or event organizer?" }
+    }
+  },
+  "model": "claude-haiku-4-5-20250929",
+  "limits": {
+    "maxMessages": 30,
+    "maxTokens": 500
+  },
+  "webhooks": {
+    "onLeadCaptured": "__N8N_LEAD_WEBHOOK__",
+    "onBookingMade": "__N8N_BOOKING_WEBHOOK__",
+    "onConversationEnd": "__N8N_END_WEBHOOK__"
+  }
+}

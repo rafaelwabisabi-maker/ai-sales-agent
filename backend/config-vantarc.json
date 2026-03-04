@@ -1,0 +1,78 @@
+{
+  "company": {
+    "name": "VantArc Agency",
+    "tagline": "Marketing & product development that turns artists into brands",
+    "services": [
+      {
+        "name": "Brand Strategy & Identity",
+        "description": "Complete brand positioning, visual identity, and brand guidelines tailored for artists and creative professionals",
+        "priceRange": "Starting at EUR 2,500",
+        "idealFor": "Artists and creatives launching or repositioning their brand"
+      },
+      {
+        "name": "Pitch Decks & Investor Materials",
+        "description": "Compelling pitch decks, one-pagers, and investor-ready presentations for creative projects and ventures",
+        "priceRange": "Starting at EUR 1,500",
+        "idealFor": "Artists seeking funding, grants, or partnership opportunities"
+      },
+      {
+        "name": "Marketing & Product Development Retainer",
+        "description": "Ongoing marketing strategy, campaign management, social media, and product development support",
+        "priceRange": "EUR 1,250/month",
+        "idealFor": "Artists and creative businesses ready for sustained growth"
+      }
+    ],
+    "differentiators": [
+      "Deep understanding of the creative and artist ecosystem",
+      "Full-service: strategy, design, marketing, and product development under one roof",
+      "Based in Linz, Austria — connected to the European creative scene",
+      "Track record with hospitality, music, and cultural projects"
+    ],
+    "targetMarket": "Artists, musicians, creative professionals, and cultural projects in Austria and Europe",
+    "language": "en"
+  },
+  "widget": {
+    "primaryColor": "#1a1a2e",
+    "accentColor": "#e94560",
+    "position": "bottom-right",
+    "greeting": "Hey! Looking for marketing support or help developing your creative project? I can help you figure out what VantArc can do for you.",
+    "avatarUrl": "",
+    "triggerDelay": 3000,
+    "showOnMobile": true
+  },
+  "booking": {
+    "provider": "calcom",
+    "link": "https://cal.com/vantarc/discovery-call",
+    "duration": 30,
+    "title": "Discovery Call — VantArc"
+  },
+  "qualification": {
+    "minScore": 55,
+    "criteria": {
+      "projectType": { "weight": 30, "question": "Do they have a clear creative project or brand need?" },
+      "budget": { "weight": 25, "question": "Is their budget realistic (min EUR 1,250/month retainer or EUR 1,500+ for projects)?" },
+      "timeline": { "weight": 25, "question": "Do they have a timeline within the next 3 months?" },
+      "decisionMaker": { "weight": 20, "question": "Are they the artist/founder or directly involved in the decision?" }
+    }
+  },
+  "availability": {
+    "enabled": true,
+    "defaultTimeZone": "Europe/Vienna",
+    "lookAheadDays": 14
+  },
+  "followUp": {
+    "enabled": true,
+    "intervals": [24, 48]
+  },
+  "model": "claude-haiku-4-5-20251001",
+  "limits": {
+    "maxMessages": 30,
+    "maxTokens": 500
+  },
+  "webhooks": {
+    "onLeadCaptured": "",
+    "onBookingMade": "",
+    "onConversationEnd": "",
+    "onFollowUpDue": ""
+  }
+}

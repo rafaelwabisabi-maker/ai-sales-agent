@@ -1,0 +1,147 @@
+{
+  "_setup_notes": {
+    "credentials_required": [
+      "Gmail OAuth2 — connect via n8n Credentials > Gmail OAuth2 API. Name it 'Gmail OAuth2'.",
+      "Google Sheets OAuth2 — connect via n8n Credentials > Google Sheets OAuth2 API. Name it 'Google Sheets OAuth2'. Create a sheet named 'Leads' with columns: Date, Name, Email, Company, Role Needed, Notes, Conversation ID, Status, Source.",
+      "Telegram API — already configured as 'Semeadora Bot'. chatId: 757037706."
+    ],
+    "after_import": [
+      "1. Replace SHEET_ID_PLACEHOLDER in 'Google Sheets - Add Lead' node with your actual Sheet ID (from the URL: /spreadsheets/d/SHEET_ID/edit).",
+      "2. Activate the workflow.",
+      "3. Copy the webhook URL (shown after activation) and paste into backend/config.json under webhooks.onLeadCaptured."
+    ]
+  },
+  "name": "AI Sales Agent - Lead Capture",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-captured",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-lead-capture-001",
+      "name": "Webhook - Lead Captured",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.timestamp }}",
+            "Name": "={{ $json.leadData.name }}",
+            "Email": "={{ $json.leadData.email }}",
+            "Company": "={{ $json.leadData.company }}",
+            "Role Needed": "={{ $json.leadData.role_needed }}",
+            "Notes": "={{ $json.leadData.notes }}",
+            "Conversation ID": "={{ $json.conversationId }}",
+            "Status": "New Lead",
+            "Source": "AI Chat"
+          }
+        },
+        "options": {}
+      },
+      "id": "gs-add-lead-001",
+      "name": "Google Sheets - Add Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [500, 180],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "757037706",
+        "text": "=🔔 Novo Lead - AI Chat!\n\n👤 {{ $json.leadData.name }}\n🏢 {{ $json.leadData.company }}\n💼 Precisa: {{ $json.leadData.role_needed }}\n📧 {{ $json.leadData.email }}\n\n📝 {{ $json.leadData.notes }}\n\n→ Agendar: https://cal.com/rafa-vaz/secret",
+        "additionalFields": {}
+      },
+      "id": "tg-notify-lead-001",
+      "name": "Telegram - Notify Lead",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [500, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Semeadora Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "minutes"
+      },
+      "id": "wait-5min-001",
+      "name": "Wait 5min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook - Lead Captured').item.json.leadData.email }}",
+        "subject": "=Olá {{ $('Webhook - Lead Captured').item.json.leadData.name }} - obrigado pelo interesse | AnimaRH",
+        "emailType": "text",
+        "message": "=Olá {{ $('Webhook - Lead Captured').item.json.leadData.name }},\n\nObrigado por entrar em contato pelo nosso chat!\n\nRecebi sua mensagem e já estou de olho nas suas necessidades: {{ $('Webhook - Lead Captured').item.json.leadData.role_needed }}.\n\nEm breve você receberá uma ligação personalizada da nossa equipe para entender melhor o perfil que está buscando.\n\nEnquanto isso, se preferir já garantir um horário na agenda, clique aqui:\n→ https://cal.com/rafa-vaz/secret\n\nAté breve,\nRafael Vaz\nAnimaRH",
+        "options": {}
+      },
+      "id": "gmail-followup-001",
+      "name": "Gmail - Follow-up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1000, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3",
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Lead Captured": {
+      "main": [
+        [
+          {"node": "Google Sheets - Add Lead", "type": "main", "index": 0},
+          {"node": "Telegram - Notify Lead", "type": "main", "index": 0},
+          {"node": "Wait 5min", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Wait 5min": {
+      "main": [
+        [
+          {"node": "Gmail - Follow-up Email", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "ai-sales-lead-capture-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["ai-sales-agent"]
+}

@@ -1,0 +1,267 @@
+{
+  "_setup_notes": {
+    "credentials_required": [
+      "Gmail OAuth2 — same credential as lead-capture workflow.",
+      "Google Sheets OAuth2 — same credential + same sheet. Needs 'Follow-Up Status' column in Leads tab.",
+      "Telegram API — same credential as lead-capture workflow."
+    ],
+    "after_import": [
+      "1. Replace SHEET_ID_PLACEHOLDER in 'Google Sheets - Update Status' node with your actual Sheet ID.",
+      "2. Activate the workflow.",
+      "3. Copy the webhook URL and paste into backend/config.json under webhooks.onFollowUpDue."
+    ]
+  },
+  "_comment": "This is a REFERENCE template, not a directly importable N8N workflow. See README.md.",
+  "name": "AI Sales Agent - Follow-Up Sequence",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "follow-up-due",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-followup-001",
+      "name": "Webhook - Follow-Up Due",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "_note": "Receives: { conversationId, email, leadData, followUpNumber, hoursSinceChat, bookingLink, timestamp }"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gs-lookup-001",
+      "name": "Google Sheets - Lookup Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [500, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "_note": "Check current lead status. If Status is 'Booked', stop — they already booked."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.Status }}",
+              "operation": "notEqual",
+              "value2": "Booked"
+            }
+          ]
+        }
+      },
+      "id": "if-not-booked-001",
+      "name": "IF - Not Already Booked",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [750, 300],
+      "_note": "Kill switch: skip follow-up if lead already booked via Cal.com or any other path."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $('Webhook - Follow-Up Due').item.json.followUpNumber }}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "switch-followup-num-001",
+      "name": "IF - Follow-Up #1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1000, 300],
+      "_note": "Route by followUpNumber: 1 = soft touch (24h), 2 = last touch (48h)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook - Follow-Up Due').item.json.email }}",
+        "subject": "=Quick follow-up — {{ $('Webhook - Follow-Up Due').item.json.leadData.name || 'there' }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Webhook - Follow-Up Due').item.json.leadData.name || 'there' }},\n\nThanks for chatting with us earlier! I wanted to check in — did you have any other questions about how we can help with {{ $('Webhook - Follow-Up Due').item.json.leadData.role_needed || $('Webhook - Follow-Up Due').item.json.leadData.notes || 'your project' }}?\n\nIf you'd like to explore things further, I'd love to set up a quick call:\n→ {{ $('Webhook - Follow-Up Due').item.json.bookingLink }}\n\nNo pressure at all — just here if you need us.\n\nBest,\nThe Team",
+        "options": {}
+      },
+      "id": "gmail-followup-1-001",
+      "name": "Gmail - Soft Touch (24h)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, 180],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "_note": "Follow-up #1: Soft, helpful, low-pressure. Sent ~24h after chat ended."
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook - Follow-Up Due').item.json.email }}",
+        "subject": "=Last note from us — {{ $('Webhook - Follow-Up Due').item.json.leadData.name || 'there' }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Webhook - Follow-Up Due').item.json.leadData.name || 'there' }},\n\nJust a final follow-up from our conversation. I know timing isn't always right, so no worries if now isn't the moment.\n\nIf you'd like to book a call for whenever works best, here's the link:\n→ {{ $('Webhook - Follow-Up Due').item.json.bookingLink }}\n\nWishing you all the best with your project. We're here whenever you're ready.\n\nCheers,\nThe Team",
+        "options": {}
+      },
+      "id": "gmail-followup-2-001",
+      "name": "Gmail - Last Touch (48h)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, 420],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3",
+          "name": "Gmail OAuth2"
+        }
+      },
+      "_note": "Follow-up #2: Graceful close. Sent ~48h after chat ended. No more emails after this."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $('Webhook - Follow-Up Due').item.json.email }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Follow-Up Status": "=Follow-up #{{ $('Webhook - Follow-Up Due').item.json.followUpNumber }} sent"
+          }
+        },
+        "options": {}
+      },
+      "id": "gs-update-status-001",
+      "name": "Google Sheets - Update Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1600, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "_note": "Update the lead's follow-up status in the CRM sheet."
+    },
+    {
+      "parameters": {
+        "chatId": "757037706",
+        "text": "=📩 Follow-up #{{ $('Webhook - Follow-Up Due').item.json.followUpNumber }} sent\n\n👤 {{ $('Webhook - Follow-Up Due').item.json.leadData.name }}\n📧 {{ $('Webhook - Follow-Up Due').item.json.email }}\n⏰ {{ $('Webhook - Follow-Up Due').item.json.hoursSinceChat }}h after chat",
+        "additionalFields": {}
+      },
+      "id": "tg-notify-followup-001",
+      "name": "Telegram - Follow-Up Sent",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1600, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Semeadora Bot"
+        }
+      },
+      "_note": "Notify team that a follow-up was sent."
+    }
+  ],
+  "connections": {
+    "Webhook - Follow-Up Due": {
+      "main": [
+        [
+          {"node": "Google Sheets - Lookup Lead", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Google Sheets - Lookup Lead": {
+      "main": [
+        [
+          {"node": "IF - Not Already Booked", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "IF - Not Already Booked": {
+      "main": [
+        [
+          {"node": "IF - Follow-Up #1", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "IF - Follow-Up #1": {
+      "main": [
+        [
+          {"node": "Gmail - Soft Touch (24h)", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "Gmail - Last Touch (48h)", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Gmail - Soft Touch (24h)": {
+      "main": [
+        [
+          {"node": "Google Sheets - Update Status", "type": "main", "index": 0},
+          {"node": "Telegram - Follow-Up Sent", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Gmail - Last Touch (48h)": {
+      "main": [
+        [
+          {"node": "Google Sheets - Update Status", "type": "main", "index": 0},
+          {"node": "Telegram - Follow-Up Sent", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "ai-sales-followup-sequence-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["ai-sales-agent"]
+}

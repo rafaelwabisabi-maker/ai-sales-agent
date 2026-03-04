@@ -1,0 +1,121 @@
+{
+  "_setup_notes": {
+    "credentials_required": [
+      "Google Sheets OAuth2 — connect via n8n Credentials > Google Sheets OAuth2 API. Name it 'Google Sheets OAuth2'. Sheet must have a 'Leads' tab with an 'Email' column for lookup.",
+      "Telegram API — already configured as 'Semeadora Bot'. chatId: 757037706."
+    ],
+    "after_import": [
+      "1. Replace SHEET_ID_PLACEHOLDER in both Google Sheets nodes with your actual Sheet ID.",
+      "2. Activate the workflow.",
+      "3. Copy the webhook URL and paste into backend/config.json under webhooks.onBookingMade.",
+      "4. Also wire this webhook URL into Cal.com webhook settings (optional — backend already fires it)."
+    ]
+  },
+  "name": "AI Sales Agent - Booking Made",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "booking-made",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-booking-made-001",
+      "name": "Webhook - Booking Made",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "SHEET_ID_PLACEHOLDER",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Booked",
+            "Call Date": "={{ $json.bookingDate }}"
+          }
+        },
+        "where": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gs-update-status-001",
+      "name": "Google Sheets - Update Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [500, 180],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "757037706",
+        "text": "=📅 Call Agendada!\n\n👤 {{ $json.name }} ({{ $json.company }})\n📅 {{ $json.bookingDate }}\n💼 {{ $json.role_needed }}\n📧 {{ $json.email }}\n\n🆔 Cal Event: {{ $json.calEventId }}",
+        "additionalFields": {}
+      },
+      "id": "tg-notify-booking-001",
+      "name": "Telegram - Notify Booking",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [500, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "2",
+          "name": "Semeadora Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first().json;\n\nconst brief = {\n  name: item.name,\n  company: item.company,\n  email: item.email,\n  role_needed: item.role_needed,\n  booking_date: item.bookingDate,\n  cal_event_id: item.calEventId,\n  call_brief: [\n    `Client: ${item.name} from ${item.company}`,\n    `Looking for: ${item.role_needed}`,\n    `Call scheduled: ${item.bookingDate}`,\n    `Prep: Review AnimaRH profile for ${item.role_needed} roles`,\n    `Cal.com event ID: ${item.calEventId}`\n  ].join('\\n'),\n  status: 'CALL_BRIEFED'\n};\n\nreturn [{ json: brief }];"
+      },
+      "id": "code-call-brief-001",
+      "name": "Code - Generate Call Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Booking Made": {
+      "main": [
+        [
+          {"node": "Google Sheets - Update Status", "type": "main", "index": 0},
+          {"node": "Telegram - Notify Booking", "type": "main", "index": 0},
+          {"node": "Code - Generate Call Brief", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "ai-sales-booking-made-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": ["ai-sales-agent"]
+}

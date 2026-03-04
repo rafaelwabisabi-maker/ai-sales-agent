@@ -1,0 +1,16 @@
+node_modules
+.git
+.gitignore
+.planning
+.claude
+docs
+deploy
+n8n-workflows
+ARCHIVE
+COLD
+*.md
+!backend/package.json
+!backend/package-lock.json
+data/
+.env
+.env.*

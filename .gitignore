@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+backend/.env
+
+# SQLite database
+data/
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Build artifacts
+*.log
+
+# Planning / internal
+.planning/
+ARCHIVE/
+COLD/
