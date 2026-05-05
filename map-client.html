@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Your AI Sales Agent Works</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#fafbfd;--surface:#ffffff;--surface2:#f4f6fa;
+  --border:#e8ecf2;--border-light:#f0f2f6;
+  --text:#1a1f36;--text2:#5e6687;--text3:#9aa0b8;
+  --blue:#3b5bdb;--blue-light:#eef1ff;--blue-glow:rgba(59,91,219,0.1);
+  --green:#2f9e44;--green-light:#ebfbee;
+  --purple:#7c3aed;--purple-light:#f3f0ff;
+  --orange:#e8590c;--orange-light:#fff4e6;
+  --font:'Plus Jakarta Sans',system-ui,sans-serif;
+}
+html{font-size:15px;scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* Hero */
+.hero{
+  text-align:center;padding:64px 24px 48px;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);
+  width:600px;height:400px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(59,91,219,0.06),transparent 70%);
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;color:var(--blue);
+  background:var(--blue-light);padding:6px 16px;border-radius:20px;
+  margin-bottom:20px;position:relative;
+}
+.hero h1{
+  font-size:clamp(32px,5vw,48px);font-weight:800;letter-spacing:-1.5px;
+  line-height:1.15;margin-bottom:16px;color:var(--text);position:relative;
+}
+.hero h1 span{
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero p{font-size:18px;color:var(--text2);max-width:540px;margin:0 auto;line-height:1.7;position:relative}
+
+/* Step counter */
+.steps-counter{
+  display:flex;justify-content:center;gap:0;margin:48px auto 0;max-width:700px;position:relative;
+}
+.steps-counter::before{
+  content:'';position:absolute;top:20px;left:15%;right:15%;height:2px;
+  background:var(--border);z-index:0;
+}
+.step-dot{
+  display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1;
+  flex:1;cursor:pointer;transition:all 0.3s;
+}
+.step-dot .num{
+  width:40px;height:40px;border-radius:50%;background:var(--surface);
+  border:2px solid var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:var(--text3);transition:all 0.3s;
+}
+.step-dot.active .num{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 16px rgba(59,91,219,0.25)}
+.step-dot .label{font-size:12px;font-weight:600;color:var(--text3);transition:color 0.3s}
+.step-dot.active .label{color:var(--blue)}
+
+/* Content sections */
+.container{max-width:900px;margin:0 auto;padding:0 24px}
+
+/* Step sections */
+.step-section{
+  padding:64px 0;opacity:0;transform:translateY(30px);
+  transition:all 0.6s ease;
+}
+.step-section.visible{opacity:1;transform:translateY(0)}
+
+.step-header{
+  display:flex;align-items:center;gap:16px;margin-bottom:32px;
+}
+.step-num{
+  width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:800;flex-shrink:0;
+}
+.step-header h2{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+.step-header p{font-size:14px;color:var(--text2);margin-top:2px}
+
+/* Visual cards */
+.visual-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:32px;box-shadow:0 2px 12px rgba(0,0,0,0.03);
+  position:relative;overflow:hidden;
+}
+.visual-card.blue{border-color:rgba(59,91,219,0.15);background:linear-gradient(135deg,#fafbff,#f0f3ff)}
+.visual-card.green{border-color:rgba(47,158,68,0.15);background:linear-gradient(135deg,#fafdfb,#edfbef)}
+.visual-card.purple{border-color:rgba(124,58,237,0.15);background:linear-gradient(135deg,#fafaff,#f3f0ff)}
+.visual-card.orange{border-color:rgba(232,89,12,0.15);background:linear-gradient(135deg,#fffbfa,#fff4e6)}
+
+/* Chat simulation */
+.chat-sim{
+  background:var(--surface);border-radius:16px;border:1px solid var(--border);
+  max-width:400px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);
+}
+.chat-sim-header{
+  background:var(--blue);padding:14px 18px;display:flex;align-items:center;gap:10px;
+}
+.chat-sim-header .avatar{
+  width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,0.2);
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.chat-sim-header h4{font-size:13px;font-weight:600;color:#fff}
+.chat-sim-header span{font-size:11px;color:rgba(255,255,255,0.6)}
+.chat-sim-body{padding:16px;display:flex;flex-direction:column;gap:8px}
+.chat-bubble{max-width:85%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5}
+.chat-bubble.bot{
+  align-self:flex-start;background:var(--surface2);border-bottom-left-radius:4px;
+  opacity:0;animation:bubble-in 0.5s ease forwards;
+}
+.chat-bubble.user{
+  align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;
+  opacity:0;animation:bubble-in 0.5s ease forwards;
+}
+.chat-bubble:nth-child(1){animation-delay:0.3s}
+.chat-bubble:nth-child(2){animation-delay:0.9s}
+.chat-bubble:nth-child(3){animation-delay:1.5s}
+.chat-bubble:nth-child(4){animation-delay:2.1s}
+@keyframes bubble-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Flow visualization */
+.flow-visual{
+  display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;
+  padding:20px 0;
+}
+.flow-step{
+  display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;
+  transition:transform 0.2s;
+}
+.flow-step:hover{transform:translateY(-4px)}
+.flow-icon{
+  width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+  font-size:28px;box-shadow:0 4px 16px rgba(0,0,0,0.06);
+}
+.flow-label{font-size:12px;font-weight:600;text-align:center;max-width:80px}
+.flow-arrow{font-size:20px;color:var(--text3);padding:0 4px;align-self:center;margin-bottom:20px}
+
+/* Result cards */
+.result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
+.result-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:20px;text-align:center;transition:all 0.3s;
+}
+.result-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.06)}
+.result-emoji{font-size:32px;margin-bottom:10px}
+.result-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.result-desc{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* Before/After */
+.compare{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:stretch}
+.compare-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;
+}
+.compare-card h4{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.compare-item{
+  display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5;
+  padding:8px 0;border-bottom:1px solid var(--border-light);color:var(--text2);
+}
+.compare-item:last-child{border-bottom:none}
+.compare-vs{
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:var(--text3);
+  writing-mode:vertical-rl;text-orientation:upright;letter-spacing:2px;
+}
+
+/* CTA */
+.cta-section{
+  text-align:center;padding:64px 24px;
+  background:linear-gradient(135deg,#f8f9ff,#f0f3ff);
+  border-top:1px solid var(--border);
+}
+.cta-section h2{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:12px}
+.cta-section p{font-size:16px;color:var(--text2);max-width:460px;margin:0 auto 24px}
+.cta-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--blue);color:#fff;font-size:15px;font-weight:700;
+  padding:14px 32px;border-radius:12px;border:none;cursor:pointer;
+  font-family:var(--font);box-shadow:0 4px 16px rgba(59,91,219,0.3);
+  transition:all 0.2s;
+}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(59,91,219,0.4)}
+
+/* Responsive */
+@media(max-width:700px){
+  .result-grid{grid-template-columns:1fr}
+  .compare{grid-template-columns:1fr;gap:12px}
+  .compare-vs{writing-mode:horizontal-tb;padding:0}
+  .flow-visual{gap:0}
+  .flow-arrow{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">For Your Business</div>
+  <h1>Your Website Gets an<br><span>AI Sales Agent</span></h1>
+  <p>It talks to every visitor, finds the right ones, and books calls on your calendar. Automatically. 24/7.</p>
+
+  <div class="steps-counter">
+    <div class="step-dot active" data-target="step1"><div class="num">1</div><div class="label">Visit</div></div>
+    <div class="step-dot" data-target="step2"><div class="num">2</div><div class="label">Chat</div></div>
+    <div class="step-dot" data-target="step3"><div class="num">3</div><div class="label">Qualify</div></div>
+    <div class="step-dot" data-target="step4"><div class="num">4</div><div class="label">Book</div></div>
+    <div class="step-dot" data-target="step5"><div class="num">5</div><div class="label">Close</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STEP 1 -->
+  <div class="step-section" id="step1">
+    <div class="step-header">
+      <div class="step-num" style="background:var(--blue-light);color:var(--blue)">1</div>
+      <div>
+        <h2>Someone Visits Your Website</h2>
+        <p>Instead of leaving like 95% of visitors do, they see a friendly chat.</p>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center">
+      <div>
+        <div class="visual-card blue">
+          <div style="font-size:48px;margin-bottom:16px">🌐</div>
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Your Website, Same as Today</h3>
+          <p style="color:var(--text2);font-size:14px;line-height:1.7">We add a small chat bubble to your existing website. Nothing changes about your site — you just get a new team member that never sleeps.</p>
+          <div style="margin-top:16px;padding:14px;background:rgba(59,91,219,0.06);border-radius:12px;font-size:13px;color:var(--blue);font-weight:600;text-align:center">
+            Works on any website — WordPress, Wix, Webflow, anything
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="chat-sim">
+          <div class="chat-sim-header">
+            <div class="avatar">🤖</div>
+            <div><h4>Sales Agent</h4><span>Online now</span></div>
+          </div>
+          <div class="chat-sim-body">
+            <div class="chat-bubble bot">Hey! Welcome. I help businesses like yours grow faster. What do you do? 👋</div>
+            <div class="chat-bubble user">I run a coaching business and need more clients</div>
+            <div class="chat-bubble bot">Great! Coaching is a perfect fit. Tell me more — what type of coaching and who are your ideal clients?</div>
+            <div class="chat-bubble user">Executive coaching, targeting managers in transition</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-section" id="step2">
+    <div class="step-header">
+      <div class="step-num" style="background:var(--green-light);color:var(--green)">2</div>
+      <div>
+        <h2>The AI Has a Real Conversation</h2>
+        <p>Not a chatbot with canned responses. A real, intelligent sales conversation.</p>
+      </div>
+    </div>
+    <div class="visual-card green">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center">
+        <div>
+          <div style="font-size:40px;margin-bottom:12px">🔍</div>
+          <h4 style="font-size:14px;font-weight:700;margin-bottom:4px">Discovers Needs</h4>
+          <p style="font-size:13px;color:var(--text2);line-height:1.5">Asks the right questions to understand what they actually need.</p>
+        </div>
+        <div>
+          <div style="font-size:40px;margin-bottom:12px">🎯</div>
+          <h4 style="font-size:14px;font-weight:700;margin-bottom:4px">Recommends Solutions</h4>
+          <p style="font-size:13px;color:var(--text2);line-height:1.5">Suggests your services based on what they told you — personalized, not generic.</p>
+        </div>
+        <div>
+          <div style="font-size:40px;margin-bottom:12px">🛡️</div>
+          <h4 style="font-size:14px;font-weight:700;margin-bottom:4px">Handles Objections</h4>
+          <p style="font-size:13px;color:var(--text2);line-height:1.5">"Too expensive?" "Not the right time?" It knows how to respond — just like a good salesperson.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step-section" id="step3">
+    <div class="step-header">
+      <div class="step-num" style="background:var(--purple-light);color:var(--purple)">3</div>
+      <div>
+        <h2>It Figures Out Who's a Real Lead</h2>
+        <p>Not everyone is a good fit. The AI scores every visitor automatically.</p>
+      </div>
+    </div>
+    <div class="visual-card purple">
+      <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#2f9e44,#40c057);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+            <span style="font-size:28px;font-weight:800;color:#fff">88</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--green)">Hot Lead</div>
+          <div style="font-size:11px;color:var(--text3)">Book a call now</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#e8590c,#fd7e14);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+            <span style="font-size:28px;font-weight:800;color:#fff">62</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--orange)">Warm Lead</div>
+          <div style="font-size:11px;color:var(--text3)">Needs nurturing</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#868e96,#adb5bd);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+            <span style="font-size:28px;font-weight:800;color:#fff">31</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:var(--text3)">Not a Fit</div>
+          <div style="font-size:11px;color:var(--text3)">Exit gracefully</div>
+        </div>
+      </div>
+      <div style="margin-top:24px;text-align:center;font-size:14px;color:var(--text2);max-width:500px;margin-left:auto;margin-right:auto">
+        The score is based on: <strong>real need</strong>, <strong>budget</strong>, <strong>decision-making power</strong>, and <strong>urgency</strong>. You only spend time on the ones that matter.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step-section" id="step4">
+    <div class="step-header">
+      <div class="step-num" style="background:var(--orange-light);color:var(--orange)">4</div>
+      <div>
+        <h2>They Book a Call on Your Calendar</h2>
+        <p>The AI offers your calendar link. They pick a time. You get notified instantly.</p>
+      </div>
+    </div>
+    <div class="flow-visual">
+      <div class="flow-step">
+        <div class="flow-icon" style="background:var(--blue-light)">💬</div>
+        <div class="flow-label">Visitor chats with agent</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon" style="background:var(--green-light)">✅</div>
+        <div class="flow-label">Qualified (score 70+)</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon" style="background:var(--purple-light)">📅</div>
+        <div class="flow-label">Books a call</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon" style="background:var(--orange-light)">📱</div>
+        <div class="flow-label">You get a notification</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon" style="background:var(--green-light)">📊</div>
+        <div class="flow-label">Lead saved to your CRM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step-section" id="step5">
+    <div class="step-header">
+      <div class="step-num" style="background:var(--green-light);color:var(--green)">5</div>
+      <div>
+        <h2>You Show Up and Close</h2>
+        <p>You already know what they need. The AI prepared everything for you.</p>
+      </div>
+    </div>
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="result-emoji">📋</div>
+        <div class="result-title">Lead Summary</div>
+        <div class="result-desc">Name, company, what they need, their score — all waiting for you before the call.</div>
+      </div>
+      <div class="result-card">
+        <div class="result-emoji">💬</div>
+        <div class="result-title">Full Conversation</div>
+        <div class="result-desc">Read exactly what they said. Know their pain points before you even say hello.</div>
+      </div>
+      <div class="result-card">
+        <div class="result-emoji">📧</div>
+        <div class="result-title">Auto Follow-Ups</div>
+        <div class="result-desc">If they don't convert on the call, automated emails keep them warm for you.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BEFORE / AFTER -->
+  <div class="step-section" id="compare">
+    <div style="text-align:center;margin-bottom:32px">
+      <h2 style="font-size:24px;font-weight:800;letter-spacing:-0.5px">Before vs. After</h2>
+    </div>
+    <div class="compare">
+      <div class="compare-card" style="border-color:rgba(220,53,69,0.15)">
+        <h4><span style="font-size:20px">😩</span> Without AI Agent</h4>
+        <div class="compare-item"><span>❌</span> 95% of visitors leave without talking to you</div>
+        <div class="compare-item"><span>❌</span> You miss leads while sleeping, eating, or in meetings</div>
+        <div class="compare-item"><span>❌</span> You spend hours qualifying people who aren't a fit</div>
+        <div class="compare-item"><span>❌</span> Follow-ups fall through the cracks</div>
+        <div class="compare-item"><span>❌</span> Your website is a brochure, not a sales machine</div>
+      </div>
+      <div class="compare-vs">VS</div>
+      <div class="compare-card" style="border-color:rgba(47,158,68,0.15)">
+        <h4><span style="font-size:20px">🚀</span> With AI Agent</h4>
+        <div class="compare-item"><span>✅</span> Every visitor gets a personalized conversation</div>
+        <div class="compare-item"><span>✅</span> Works 24/7 — nights, weekends, holidays</div>
+        <div class="compare-item"><span>✅</span> Only qualified leads hit your calendar</div>
+        <div class="compare-item"><span>✅</span> Automated emails nurture every lead</div>
+        <div class="compare-item"><span>✅</span> Your website becomes a revenue engine</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Ready to Turn Visitors Into Clients?</h2>
+  <p>Your AI sales agent is live in 48 hours. No technical skills needed — we handle everything.</p>
+  <button class="cta-btn" onclick="window.open('https://cal.com','_blank')">Book a Free Demo Call →</button>
+  <div style="margin-top:16px;font-size:13px;color:var(--text3)">30 minutes · No commitment · See it working live</div>
+</div>
+
+<div style="padding:24px;text-align:center;font-size:12px;color:var(--text3)">
+  AI Sales Agent · Powered by Claude AI · 2026
+</div>
+
+<script>
+// Scroll animation
+var sections = document.querySelectorAll('.step-section');
+var stepDots = document.querySelectorAll('.step-dot');
+
+var observer = new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){
+    if(entry.isIntersecting){
+      entry.target.classList.add('visible');
+      // Update step dots
+      var id = entry.target.id;
+      stepDots.forEach(function(dot){
+        dot.classList.toggle('active', dot.dataset.target === id);
+      });
+    }
+  });
+},{threshold:0.15});
+
+sections.forEach(function(sec){ observer.observe(sec); });
+
+// Click step dots to scroll
+stepDots.forEach(function(dot){
+  dot.addEventListener('click',function(){
+    var target = document.getElementById(this.dataset.target);
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+</script>
+</body>
+</html>

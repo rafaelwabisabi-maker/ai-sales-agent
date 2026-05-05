@@ -1,6 +1,6 @@
 # Client Acquisition & Delivery Workflow — AI Sales Agent
 > **Version:** 1.0 | **Created:** 2026-02-23
-> **Based on:** OUTREACH-SALES-WORKFLOW-TEMPLATE.md (Semeadora universal template)
+> **Based on:** OUTREACH-SALES-WORKFLOW-TEMPLATE.md (SOL universal template)
 > **Product:** Embeddable AI sales chat widget (Claude Haiku + Node.js + SQLite)
 > **Dual purpose:** (1) Service sold to clients, (2) Internal tool for AnimaRH/NP/WW
 
@@ -176,7 +176,7 @@
 | AnimaRH | Career page | "Recrutador Digital AnimaRH" | Qualify candidates before human contact |
 | Naturprogramme | school-landing.html | "Elisabeth's Nature Guide" | Qualify school inquiries → book discovery call |
 | Wandel Weise | wandel-weise.at | "Healing Journey Guide" | Qualify clients → book session |
-| KRAFTWERK | pitch app | "KRAFTWERK Concierge" | Answer investor questions → book meeting |
+| Linz Hostel | pitch app | "Linz Hostel Concierge" | Answer investor questions → book meeting |
 
 ---
 
